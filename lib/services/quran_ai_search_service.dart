@@ -62,7 +62,10 @@ class QuranAiSearchService {
   QuranAiSearchService._();
   static final QuranAiSearchService instance = QuranAiSearchService._();
 
-  static const String _geminiApiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+  // Gemini API key from https://aistudio.google.com/app/apikey
+  // Both 'AIza...' (old) and 'AQ.Ab...' (new, since May 2026) formats are valid.
+  // Keys expire after 24h if not linked to a Cloud project — get a fresh one if searches fail.
+  static const String _geminiApiKey = 'AQ.Ab8RN6JRCHLNoxk9d03pArEBJFxss8BQrCudS1-ocMR5U-Jdww';
 
   /// In-memory cache for fast instant query results
   final Map<String, QuranAiSearchResponse> _cache = {};
@@ -132,18 +135,19 @@ class QuranAiSearchService {
 
   Future<Map<String, dynamic>> _callGeminiApi(String query, String apiKey) async {
     final urlWithKey = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey',
     );
 
     const systemPrompt = '''
-You are a master Islamic scholar and Quran semantic search engine.
-Analyze user natural language search queries in Kurdish, Arabic, or English and extract the most accurate, verified Ayahs from the Holy Quran (114 Surahs).
+You are a master Islamic scholar and Quran multilingual semantic search engine.
+Analyze user natural language search queries in ANY language (Kurdish, Arabic, English, Turkish, Persian, Urdu, French, German, Indonesian, Russian, Spanish, Somali, Bengali, Hausa, Swahili, Latin/Arabizi transliteration, or any regional dialect) and extract the most accurate, verified Ayahs from the Holy Quran (114 Surahs).
 
 CRITICAL INSTRUCTIONS:
+- Understand and parse the query regardless of the input language or spelling errors.
 - Return ONLY valid JSON (no markdown code blocks, no ```json).
 - Validate exact Surah number (1 to 114) and Ayah number.
-- Provide concise 1-sentence explanations in reason_ku (Sorani Kurdish), reason_ar (Arabic), and reason_en (English) describing why this Ayah is the exact match.
-- Return between 1 to 5 of the most accurate Ayahs.
+- Provide concise 1-sentence explanations in reason_ku (Sorani Kurdish), reason_ar (Arabic), and reason_en (English) explaining why each Ayah was matched.
+- Return ALL relevant Ayahs matching the user's intent or requested quantity (whether 1 specific Ayah, several Ayahs, or all major verses for the topic, up to 15 Ayahs).
 
 JSON OUTPUT FORMAT:
 {
@@ -170,7 +174,6 @@ JSON OUTPUT FORMAT:
       ],
       'generationConfig': {
         'temperature': 0.1,
-        'responseMimeType': 'application/json',
       }
     };
 
@@ -179,34 +182,26 @@ JSON OUTPUT FORMAT:
       'x-goog-api-key': apiKey,
     };
 
-    http.Response res = await http.post(
+    final http.Response res = await http.post(
       urlWithKey,
       headers: headers,
       body: json.encode(requestBody),
-    ).timeout(const Duration(seconds: 12));
+    ).timeout(const Duration(seconds: 20));
 
-    // If query param auth rejected, try with Bearer token
-    if (res.statusCode == 401 || res.statusCode == 403 || res.statusCode == 400) {
-      final rawUrl = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
-      );
-      final bearerHeaders = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $apiKey',
-      };
-      final retryRes = await http.post(
-        rawUrl,
-        headers: bearerHeaders,
-        body: json.encode(requestBody),
-      ).timeout(const Duration(seconds: 12));
-      if (retryRes.statusCode == 200) {
-        res = retryRes;
-      }
-    }
 
     if (res.statusCode != 200) {
+      String errMsg = 'Gemini API error ${res.statusCode}';
+      try {
+        final errData = json.decode(res.body) as Map<String, dynamic>;
+        final code = (errData['error'] as Map?)??{};
+        final msg = code['message'] as String? ?? '';
+        if (res.statusCode == 429) { errMsg = 'Rate limit reached. Try again in a moment.'; }
+        else if (res.statusCode == 400) { errMsg = 'Bad request${msg.isNotEmpty ? ": $msg" : ""}'; }
+        else if (res.statusCode == 403) { errMsg = 'API key invalid or quota exceeded.'; }
+        else if (msg.isNotEmpty) { errMsg = msg; }
+      } catch (_) {}
       debugPrint('Gemini HTTP Error ${res.statusCode}: ${res.body}');
-      throw Exception('Gemini API status ${res.statusCode}: ${res.body}');
+      throw Exception(errMsg);
     }
 
     final data = json.decode(res.body) as Map<String, dynamic>;
@@ -475,7 +470,13 @@ JSON OUTPUT FORMAT:
       },
       // 17. Forgiveness
       {
-        'keys': ['forgiveness', 'repentance', 'تۆبە', 'لێخۆشبوون', 'توبة', 'استغفار', 'ئیستیغفار', 'مەغفیرەت', 'گوناھ', 'تاوان', 'بەزەیی'],
+        'keys': [
+          'forgiveness', 'repentance', 'tawba', 'tawbah', 'istighfar',
+          'تۆبە', 'تەوبە', 'توبه', 'تەوبه', 'تووبە', 'لێخۆشبوون',
+          'توبة', 'تووبه', 'استغفار', 'ئیستیغفار', 'مەغفیرەت',
+          'گوناھ', 'تاوان', 'بەزەیی', 'لێخۆشبووی خودا',
+          'التوبة', 'الاستغفار', 'المغفرة', 'الرحمة',
+        ],
         'topic': 'دەرگای بەزەیی و لێخۆشبوونی خودا بۆ تاوانباران / Divine Forgiveness and Mercy',
         'surah': 39,
         'ayah': 53,
@@ -489,10 +490,22 @@ JSON OUTPUT FORMAT:
     for (final item in topicDb) {
       final keys = (item['keys'] as List<String>).map(normalizeSearchText).toList();
       final isMatch = keys.any((k) {
-        if (normQ.contains(k) || k.contains(normQ)) return true;
+        // Short keys (≤4 chars, e.g. 'ربا', 'سوو') must be whole words to avoid
+        // false positives — e.g. 'ربا' must NOT match inside 'دەربارەی' (about).
+        final bool queryContainsKey;
+        if (k.length <= 4) {
+          final wordBoundary = RegExp(
+            '(^|[\\u0020\\u0009،,\\.!؟])${RegExp.escape(k)}([\\u0020\\u0009،,\\.!؟]|\$)',
+          );
+          queryContainsKey = wordBoundary.hasMatch(normQ);
+        } else {
+          queryContainsKey = normQ.contains(k);
+        }
+
+        if (queryContainsKey || k.contains(normQ)) { return true; }
         if (words.length >= 2) {
           final allWordsMatch = words.every((w) => k.contains(w));
-          if (allWordsMatch) return true;
+          if (allWordsMatch) { return true; }
         }
         return false;
       });
