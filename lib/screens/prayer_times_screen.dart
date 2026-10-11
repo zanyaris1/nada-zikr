@@ -1,0 +1,876 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../app_localizations.dart';
+import '../services/azan_audio_service.dart';
+import '../services/prayer_repository.dart';
+import '../services/notification_service.dart';
+import '../services/prayer_widget_service.dart';
+import '../services/storage_service.dart';
+import '../widgets/app_theme.dart';
+import '../widgets/location_selector_sheet.dart';
+import '../widgets/monthly_timetable_sheet.dart';
+import '../widgets/prayer_settings_sheet.dart';
+import '../widgets/qibla_compass_sheet.dart';
+import '../widgets/azan_sound_picker_sheet.dart';
+
+/// Premier Main Prayer Times & Qibla Screen
+class PrayerTimesScreen extends StatefulWidget {
+  const PrayerTimesScreen({Key? key}) : super(key: key);
+
+  @override
+  State<PrayerTimesScreen> createState() => _PrayerTimesScreenState();
+}
+
+class _PrayerTimesScreenState extends State<PrayerTimesScreen>
+    with WidgetsBindingObserver {
+  DateTime _selectedDate = DateTime.now();
+  late Future<Map<String, dynamic>> _scheduleFuture;
+  Timer? _tickerTimer;
+  Duration _timeUntilNext = Duration.zero;
+  bool _notificationsAllowed = true;
+  bool _exactAlarmsAllowed = true;
+  bool _batteryOptIgnored = true;
+  String? _lastTriggeredPrayerKey;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refreshSchedule();
+    _checkPermissions();
+    _tickerTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _updateCountdown();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _tickerTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkPermissions();
+    }
+  }
+
+  Future<void> _checkPermissions() async {
+    final notifs = await NotificationService.areNotificationsEnabled();
+    final exact = await NotificationService.canScheduleExactNotifications();
+    final batteryOpt = await NotificationService.isBatteryOptimizationIgnored();
+    if (mounted) {
+      setState(() {
+        _notificationsAllowed = notifs;
+        _exactAlarmsAllowed = exact;
+        _batteryOptIgnored = batteryOpt;
+      });
+    }
+  }
+
+  void _refreshSchedule() {
+    final future =
+        PrayerRepository.getPrayerScheduleForDate(date: _selectedDate);
+    setState(() {
+      _scheduleFuture = future;
+    });
+    unawaited(NotificationService.rescheduleUpcomingPrayerAzans());
+    unawaited(PrayerWidgetService.updateWidgets());
+  }
+
+  void _updateCountdown() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  /// Checks if prayer time just arrived while user is actively in the app,
+  /// playing the Azan loud and clear through device speakers.
+  void _checkForegroundAzanTrigger(String nextId, DateTime? nextTime) {
+    if (nextTime == null) return;
+    final now = DateTime.now();
+    final diff = nextTime.difference(now);
+    final key = '${nextId}_${nextTime.day}_${nextTime.hour}_${nextTime.minute}';
+
+    // If within 1 second of prayer time or just passed within 30 seconds
+    if (diff.inSeconds <= 0 && diff.inSeconds >= -30 && _lastTriggeredPrayerKey != key) {
+      _lastTriggeredPrayerKey = key;
+      final mode = StorageService.getPrayerNotificationModes()[nextId] ?? 'azan';
+      if (mode == 'azan') {
+        unawaited(AzanAudioService.instance.playSelected(prayerId: nextId));
+      } else if (mode == 'vibrate') {
+        unawaited(HapticFeedback.vibrate());
+      }
+    }
+  }
+
+  String _formatDuration(Duration duration) {
+    if (duration.isNegative) return '00:00:00';
+    final hours = duration.inHours.toString().padLeft(2, '0');
+    final minutes = (duration.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
+  }
+
+  Future<void> _cyclePrayerNotificationMode(String prayerId) async {
+    final current =
+        StorageService.getPrayerNotificationModes()[prayerId] ?? 'azan';
+    const modes = ['azan', 'silent', 'vibrate'];
+    final next = modes[(modes.indexOf(current) + 1) % modes.length];
+    await StorageService.savePrayerNotificationMode(prayerId, next);
+    if (next == 'azan') {
+      final currentSound = await StorageService.getAzanSound();
+      if (currentSound == 'silent' || currentSound == 'vibrate') {
+        await StorageService.saveAzanSound('makkah');
+      }
+    }
+    await NotificationService.rescheduleUpcomingPrayerAzans();
+    if (next == 'vibrate') {
+      await HapticFeedback.vibrate();
+    } else if (next == 'azan') {
+      await HapticFeedback.mediumImpact();
+    } else {
+      await HapticFeedback.selectionClick();
+    }
+    if (mounted) setState(() {});
+  }
+
+  IconData _notificationModeIcon(String prayerId) {
+    final mode =
+        StorageService.getPrayerNotificationModes()[prayerId] ?? 'azan';
+    switch (mode) {
+      case 'silent':
+        return Icons.notifications_off_outlined;
+      case 'vibrate':
+        return Icons.vibration_rounded;
+      default:
+        return Icons.volume_up_rounded;
+    }
+  }
+
+  Widget _buildPermissionNoticeBanner(bool isKurdish, String lang) {
+    if (_notificationsAllowed && _exactAlarmsAllowed && _batteryOptIgnored) {
+      return const SizedBox.shrink();
+    }
+
+    final bool isNotificationMissing = !_notificationsAllowed;
+    final bool isExactAlarmMissing = !_exactAlarmsAllowed;
+
+    final String title = isNotificationMissing
+        ? (lang == 'kmr'
+            ? 'ئاگەهدارکرن نەچالاكن'
+            : (isKurdish
+                ? 'ئاگادارکردنەوەکان ناچالاکن'
+                : (lang == 'ar' ? 'الإشعارات معطلة' : 'Notifications are disabled')))
+        : (isExactAlarmMissing
+            ? (lang == 'kmr'
+                ? 'دیاریکردنا دەمێ دروست سنووردارە'
+                : (isKurdish
+                    ? 'کات دیاریکردنی ورد سنووردارە'
+                    : (lang == 'ar'
+                        ? 'تنبيهات المواعيد الدقيقة مقيدة'
+                        : 'Exact prayer alarms restricted')))
+            : (lang == 'kmr'
+                ? 'دەستکاریکەرێ پاتریێ'
+                : (isKurdish
+                    ? 'دەستکاریکەری پاتری (پاشبنەما)'
+                    : (lang == 'ar'
+                        ? 'تحسين البطارية نشط'
+                        : 'Battery Saver Active'))));
+
+    final String subtitle = isNotificationMissing
+        ? (lang == 'kmr'
+            ? 'هیڤییە ڕێگێ بدە ئاگەهدارکرنان بۆ گەهشتنا بانگی و دەمێن نڤێژێ.'
+            : (isKurdish
+                ? 'تکایە ڕێگە بە ئاگادارکردنەوە بدە بۆ گەیشتنی بانگ و کاتی نوێژەکان.'
+                : (lang == 'ar'
+                    ? 'يرجى تفعيل الإشعارات لسماع الأذان وتنبيهات أوقات الصلاة.'
+                    : 'Enable notifications to hear the Azan and prayer alerts on time.')))
+        : (isExactAlarmMissing
+            ? (lang == 'kmr'
+                ? 'داکو بانگ ڕێک ل دەمێ خۆ لێبدەت، ڕێگێ بدە دەمژمێرا هویر د ڕێکخستنان دا.'
+                : (isKurdish
+                    ? 'بۆ ئەوەی بانگ ڕێک لە کاتی خۆیدا لێبدات، ڕێگە بە کاتژمێری ورد بدە لە ڕێکخستنەکان.'
+                    : (lang == 'ar'
+                        ? 'لسماع الأذان بدقة في وقته المحدد، يرجى السماح بالتنبيهات الدقيقة.'
+                        : 'To ring the Azan accurately on time, allow Alarms & Reminders in settings.')))
+            : (lang == 'kmr'
+                ? 'داکو ل دەمێ قفلبوونێ مۆبایلا تە بانگی نەڕاوەستینیت، پاتریێ ڕێکبێخە.'
+                : (isKurdish
+                    ? 'بۆ ئەوەی لە کاتی قفڵبووندا مۆبایلەکەت بانگ نەوەستێنێت، بەخشین لە پاتری هەڵبژێرە.'
+                    : (lang == 'ar'
+                        ? 'لضمان سماع صوت الأذان عند قفل الشاشة، يرجى استثناء التطبيق من تحسين البطارية.'
+                        : 'To ensure Azan sounds reliably when phone is locked, exclude from battery saver.'))));
+
+    final String buttonLabel = isNotificationMissing
+        ? (lang == 'kmr' ? 'چالاککرن' : (isKurdish ? 'چالاککردن' : (lang == 'ar' ? 'تفعيل' : 'Enable')))
+        : (isExactAlarmMissing
+            ? (lang == 'kmr' ? 'ڕێکخستن' : (isKurdish ? 'ڕێکخستن' : (lang == 'ar' ? 'إصلاح' : 'Fix')))
+            : (lang == 'kmr' ? 'ڕێپێدان' : (isKurdish ? 'ڕێپێدان' : (lang == 'ar' ? 'سماح' : 'Allow'))));
+
+    final IconData bannerIcon = isNotificationMissing
+        ? Icons.notifications_off_rounded
+        : (isExactAlarmMissing ? Icons.alarm_off_rounded : Icons.battery_alert_rounded);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF332008),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppColors.gold.withValues(alpha: 0.6),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              bannerIcon,
+              color: AppColors.gold,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: isKurdish
+                      ? AppTheme.kurdishTitle(
+                          fontSize: 13,
+                          color: AppColors.gold,
+                          fontWeight: FontWeight.bold,
+                        )
+                      : AppTheme.englishTitle(
+                          fontSize: 13,
+                          color: AppColors.gold,
+                          fontWeight: FontWeight.bold,
+                        ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: isKurdish
+                      ? AppTheme.kurdishText(
+                          fontSize: 11,
+                          color: AppColors.cream.withValues(alpha: 0.85),
+                        )
+                      : AppTheme.englishText(
+                          fontSize: 11,
+                          color: AppColors.cream.withValues(alpha: 0.85),
+                        ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: Colors.black87,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            onPressed: () async {
+              if (isNotificationMissing) {
+                await NotificationService.requestNotificationPermission();
+              } else if (isExactAlarmMissing) {
+                await NotificationService.requestExactAlarmsPermission();
+              } else {
+                await NotificationService.requestBatteryOptimizationExclusion();
+              }
+              await _checkPermissions();
+              await NotificationService.rescheduleUpcomingPrayerAzans();
+            },
+            child: Text(buttonLabel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final lang = loc?.locale.languageCode ?? 'ku';
+    final isKurdish = lang == 'ku' || lang == 'kmr';
+
+    return Scaffold(
+      backgroundColor: AppColors.darkBg,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF0D2419),
+              AppColors.darkBg,
+              AppColors.darkBgAlt,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: FutureBuilder<Map<String, dynamic>>(
+            future: _scheduleFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(
+                  child: CircularProgressIndicator(color: AppColors.gold),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(
+                    'Error loading schedule: ${snapshot.error}',
+                    style: AppTheme.englishText(color: Colors.redAccent),
+                  ),
+                );
+              }
+
+              final data = snapshot.data!;
+              final double lat = data['latitude'];
+              final double lng = data['longitude'];
+              final WorldCity? currentCity = data['city'];
+              final String locationName = isKurdish
+                  ? (data['locationNameKu'] ?? currentCity?.nameKu ?? data['locationName'])
+                  : (lang == 'ar'
+                      ? (data['locationNameAr'] ?? currentCity?.nameAr ?? data['locationName'])
+                      : (data['locationNameEn'] ?? currentCity?.nameEn ?? data['locationName']));
+              final List<PrayerTimeItem> items = data['items'];
+              final String nextId = data['nextId'];
+              final DateTime? nextTime = data['nextTime'];
+              final HijriDateInfo hijriDate = data['hijriDate'];
+
+              if (nextTime != null) {
+                _timeUntilNext = nextTime.difference(DateTime.now());
+                _checkForegroundAzanTrigger(nextId, nextTime);
+              }
+
+              final nextItem = items.firstWhere(
+                (it) => it.id == nextId,
+                orElse: () => items.first,
+              );
+
+              return Column(
+                children: [
+                  // Top Navigation & Action Bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Location Selector Button
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              LocationSelectorSheet.show(
+                                context,
+                                locale: lang,
+                                onLocationSelected: _refreshSchedule,
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.panelColor,
+                                border: Border.all(
+                                    color:
+                                        AppColors.gold.withValues(alpha: 0.35)),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.location_on_rounded,
+                                      color: AppColors.gold, size: 18),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      locationName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: isKurdish
+                                          ? AppTheme.kurdishTitle(
+                                              fontSize: 13,
+                                              color: AppColors.cream)
+                                          : AppTheme.englishText(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.cream),
+                                    ),
+                                  ),
+                                  Icon(Icons.arrow_drop_down_rounded,
+                                      color: AppColors.gold, size: 20),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+
+                        // Action Buttons: Qibla Compass, Timetable, Settings, Azan Sound
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // 🧭 QIBLA COMPASS BUTTON
+                                IconButton(
+                                  padding: const EdgeInsets.all(4),
+                                  constraints: const BoxConstraints(),
+                                  tooltip: isKurdish
+                                      ? 'قیبلەنما'
+                                      : (lang == 'ar'
+                                          ? 'بوصلة القبلة'
+                                          : 'Qibla Compass'),
+                                  icon: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.gold.withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: AppColors.gold
+                                              .withValues(alpha: 0.4)),
+                                    ),
+                                    child: Icon(Icons.explore_rounded,
+                                        color: AppColors.gold, size: 18),
+                                  ),
+                                  onPressed: () {
+                                    QiblaCompassSheet.show(
+                                      context,
+                                      latitude: lat,
+                                      longitude: lng,
+                                      locationName: locationName,
+                                    );
+                                  },
+                                ),
+                                const SizedBox(width: 4),
+                                // 📅 MONTHLY TIMETABLE
+                                IconButton(
+                                  padding: const EdgeInsets.all(4),
+                                  constraints: const BoxConstraints(),
+                                  tooltip: 'Monthly Timetable',
+                                  icon: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.panelColor,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: AppColors.panelBorderColor),
+                                    ),
+                                    child: Icon(Icons.calendar_month_rounded,
+                                        color: AppColors.cream, size: 17),
+                                  ),
+                                  onPressed: () {
+                                    MonthlyTimetableSheet.show(context,
+                                        initialDate: _selectedDate);
+                                  },
+                                ),
+                                const SizedBox(width: 4),
+                                // ⚙️ PRAYER SETTINGS
+                                IconButton(
+                                  padding: const EdgeInsets.all(4),
+                                  constraints: const BoxConstraints(),
+                                  tooltip: 'Prayer Settings',
+                                  icon: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.panelColor,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: AppColors.panelBorderColor),
+                                    ),
+                                    child: Icon(Icons.settings_outlined,
+                                        color: AppColors.cream, size: 17),
+                                  ),
+                                  onPressed: () {
+                                    PrayerSettingsSheet.show(
+                                      context,
+                                      onSettingsSaved: _refreshSchedule,
+                                    );
+                                  },
+                                ),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  padding: const EdgeInsets.all(4),
+                                  constraints: const BoxConstraints(),
+                                  tooltip: 'Azan sound',
+                                  icon: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.panelColor,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: AppColors.panelBorderColor),
+                                    ),
+                                    child: Icon(Icons.volume_up_rounded,
+                                        color: AppColors.cream, size: 17),
+                                  ),
+                                  onPressed: () =>
+                                      AzanSoundPickerSheet.show(context),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        children: [
+                          _buildPermissionNoticeBanner(isKurdish, lang),
+
+                          // HERO NEXT PRAYER CARD WITH COUNTDOWN (Prominent Hero, Trimmed Height)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 15),
+                            decoration: BoxDecoration(
+                              color: AppColors.panelColor,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                  color: AppColors.gold.withValues(alpha: 0.4),
+                                  width: 1.5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.gold.withValues(alpha: 0.12),
+                                  blurRadius: 20,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 3.5),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.gold
+                                            .withValues(alpha: 0.16),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        lang == 'kmr'
+                                            ? 'نڤێژا بهێت'
+                                            : (isKurdish
+                                                ? 'نوێژی داهاتوو'
+                                                : (lang == 'ar'
+                                                    ? 'الصلاة القادمة'
+                                                    : 'NEXT PRAYER')),
+                                        style: AppTheme.englishText(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.gold,
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      nextItem.formattedTime(),
+                                      style: AppTheme.englishText(
+                                          fontSize: 13,
+                                          color: AppColors.faintText),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+
+                                // Next Prayer Name
+                                Text(
+                                  nextItem.localizedName(lang),
+                                  style: isKurdish
+                                      ? AppTheme.kurdishTitle(
+                                          fontSize: 25, color: AppColors.gold)
+                                      : AppTheme.englishTitle(
+                                          fontSize: 25, color: AppColors.gold),
+                                ),
+                                const SizedBox(height: 4),
+
+                                // Live Countdown Timer (HH:MM:SS)
+                                Text(
+                                  _formatDuration(_timeUntilNext),
+                                  style: AppTheme.englishTitle(
+                                    fontSize: 34,
+                                    color: AppColors.cream,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          // DATE BAR WITH WEEKDAY, GREGORIAN & HIJRI
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color:
+                                  AppColors.panelColor.withValues(alpha: 0.8),
+                              borderRadius: BorderRadius.circular(16),
+                              border:
+                                  Border.all(color: AppColors.panelBorderColor),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  icon: Icon(Icons.chevron_left_rounded,
+                                      color: AppColors.gold, size: 22),
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedDate = _selectedDate
+                                          .subtract(const Duration(days: 1));
+                                      _refreshSchedule();
+                                    });
+                                  },
+                                ),
+                                Column(
+                                  children: [
+                                    Text(
+                                      _getWeekdayName(_selectedDate.weekday, lang),
+                                      style: isKurdish
+                                          ? AppTheme.kurdishTitle(
+                                              fontSize: 13,
+                                              color: AppColors.gold,
+                                              fontWeight: FontWeight.bold,
+                                            )
+                                          : AppTheme.englishTitle(
+                                              fontSize: 13,
+                                              color: AppColors.gold,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}  ·  ${hijriDate.formatted(lang)}',
+                                      style: AppTheme.englishText(
+                                          fontSize: 12, color: AppColors.cream),
+                                    ),
+                                  ],
+                                ),
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  icon: Icon(Icons.chevron_right_rounded,
+                                      color: AppColors.gold, size: 22),
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedDate = _selectedDate
+                                          .add(const Duration(days: 1));
+                                      _refreshSchedule();
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          // DAILY PRAYER CARDS LIST
+                          Column(
+                            children: items.map((item) {
+                              final isNext = item.id == nextId &&
+                                  _selectedDate.day == DateTime.now().day;
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 7),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: isNext
+                                      ? AppColors.gold.withValues(alpha: 0.16)
+                                      : AppColors.panelColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isNext
+                                        ? AppColors.gold
+                                        : (item.isPassed
+                                            ? Colors.white10
+                                            : AppColors.panelBorderColor),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            _getPrayerIcon(item.id),
+                                            color: isNext
+                                                ? AppColors.gold
+                                                : (item.isPassed
+                                                    ? AppColors.faintText
+                                                    : AppColors.cream),
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 14),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  item.localizedName(lang),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: isKurdish
+                                                      ? AppTheme.kurdishTitle(
+                                                          fontSize: 15,
+                                                          color: isNext
+                                                              ? AppColors.gold
+                                                              : AppColors.cream,
+                                                        )
+                                                      : AppTheme.englishText(
+                                                          fontSize: 15,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color: isNext
+                                                              ? AppColors.gold
+                                                              : AppColors.cream,
+                                                        ),
+                                                ),
+                                                Text(
+                                                  item.id.toUpperCase(),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: AppTheme.englishText(
+                                                    fontSize: 10,
+                                                    color: AppColors.faintText,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: FittedBox(
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              onPressed: () =>
+                                                  _cyclePrayerNotificationMode(
+                                                      item.id),
+                                              tooltip: 'Change prayer alert mode',
+                                              icon: Icon(
+                                                _notificationModeIcon(item.id),
+                                                size: 19,
+                                                color: isNext
+                                                    ? AppColors.gold
+                                                    : AppColors.mutedText,
+                                              ),
+                                            ),
+                                            Text(
+                                              item.formattedTime(),
+                                              style: AppTheme.englishTitle(
+                                                fontSize: 16,
+                                                color: isNext
+                                                    ? AppColors.gold
+                                                    : AppColors.cream,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getWeekdayName(int weekday, String lang) {
+    const kuDays = [
+      'دووشەممە', 'سێشەممە', 'چوارشەممە', 'پێنجشەممە',
+      'هەینی', 'شەممە', 'یەکشەممە',
+    ];
+    const kmrDays = [
+      'دووشەمب', 'سێشەمب', 'چوارشەمب', 'پێنجشەمب',
+      'ئەینی', 'شەمبی', 'ئێکشەمب',
+    ];
+    const arDays = [
+      'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس',
+      'الجمعة', 'السبت', 'الأحد',
+    ];
+    const enDays = [
+      'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+      'Friday', 'Saturday', 'Sunday',
+    ];
+    final index = weekday - 1; // DateTime.weekday: 1=Mon, 7=Sun
+    if (lang == 'kmr') return kmrDays[index];
+    if (lang == 'ku') return kuDays[index];
+    if (lang == 'ar') return arDays[index];
+    return enDays[index];
+  }
+
+  IconData _getPrayerIcon(String id) {
+    switch (id) {
+      case 'fajr':
+        return Icons.wb_twilight_rounded;
+      case 'sunrise':
+        return Icons.wb_sunny_outlined;
+      case 'dhuhr':
+        return Icons.wb_sunny_rounded;
+      case 'asr':
+        return Icons.wb_cloudy_rounded;
+      case 'maghrib':
+        return Icons.nights_stay_outlined;
+      case 'isha':
+        return Icons.nights_stay_rounded;
+      default:
+        return Icons.access_time_rounded;
+    }
+  }
+}

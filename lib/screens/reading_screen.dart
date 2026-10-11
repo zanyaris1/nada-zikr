@@ -1,0 +1,926 @@
+import 'package:flutter/material.dart';
+import '../app_localizations.dart';
+import '../models/app_data.dart';
+import '../models/azkar_model.dart';
+import '../services/app_haptics.dart';
+import '../services/quran_service.dart';
+import '../services/storage_service.dart';
+import '../services/dhikr_package_service.dart';
+import '../services/hadith_service.dart';
+import '../services/quran_dua_service.dart';
+import '../services/zikr_audio_service.dart';
+import 'package:just_audio/just_audio.dart';
+import '../widgets/app_theme.dart';
+import '../widgets/dua_card_generator.dart';
+
+class ReadingScreen extends StatefulWidget {
+  final AzkarCategory category;
+
+  const ReadingScreen({Key? key, required this.category}) : super(key: key);
+
+  @override
+  State<ReadingScreen> createState() => _ReadingScreenState();
+}
+
+class _ReadingScreenState extends State<ReadingScreen> {
+  List<Azkar> _azkarList = const [];
+  int _currentIndex = 0;
+  // Stores per-zikr repeat counts so navigating back/forward keeps progress
+  final Map<int, int> _repeatCounts = {};
+  bool _completed = false;
+  bool _isCountingPulse = false;
+  bool? _showEnglishMode;
+
+  int get _repeatCount => _repeatCounts[_currentIndex] ?? 0;
+  void _setRepeatCount(int val) => _repeatCounts[_currentIndex] = val;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAzkar();
+  }
+
+  @override
+  void dispose() {
+    ZikrAudioService.instance.stop();
+    super.dispose();
+  }
+
+  Future<void> _loadAzkar() async {
+    final list =
+        AppData.getAzkarByCategory(widget.category.id)[widget.category.id];
+    _azkarList = list ?? AppData.morningAzkar;
+    if (widget.category.id == 'morning' ||
+        widget.category.id == 'evening' ||
+        widget.category.id == 'prayer') {
+      _azkarList =
+          await DhikrPackageService.instance.loadCategory(widget.category.id);
+    } else if (widget.category.id == 'hadith') {
+      final hadiths = await HadithService.loadAllHadiths();
+      _azkarList = hadiths.map((h) {
+        return Azkar(
+          id: h.id,
+          arabic: h.textAr,
+          translation: h.narratorAr,
+          kurdishTranslation: h.textKu,
+          repeat: 1,
+          source: '${h.chapter} • ${h.source} (${h.grade})',
+        );
+      }).toList();
+    } else if (widget.category.id == 'surah_mulk') {
+      final ayahs = await QuranService.instance.loadAyahsForSurah(67);
+      _azkarList = await Future.wait(ayahs.map((a) async {
+        final tafsir = await QuranService.instance.getTafsir('hazhar', 67, a.ayah) ??
+            await QuranService.instance.getTafsir('asan', 67, a.ayah) ?? '';
+        return Azkar(
+          id: a.ayah,
+          arabic: a.text,
+          translation: '',
+          kurdishTranslation: tafsir,
+          repeat: 1,
+          source: 'سوورەتی الملك : ${a.ayah}',
+        );
+      }));
+    } else if (widget.category.id == 'surah_kahf') {
+      final ayahs = await QuranService.instance.loadAyahsForSurah(18);
+      _azkarList = await Future.wait(ayahs.map((a) async {
+        final tafsir = await QuranService.instance.getTafsir('hazhar', 18, a.ayah) ??
+            await QuranService.instance.getTafsir('asan', 18, a.ayah) ?? '';
+        return Azkar(
+          id: a.ayah,
+          arabic: a.text,
+          translation: '',
+          kurdishTranslation: tafsir,
+          repeat: 1,
+          source: 'سوورەتی الكهف : ${a.ayah}',
+        );
+      }));
+    } else if (widget.category.id == 'quran') {
+      final duas = await QuranDuaService.loadAllDuas();
+      _azkarList = duas.map((d) => d.toAzkar()).toList();
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _handleCount() async {
+    final current = _azkarList[_currentIndex];
+    StorageService.incrementZikrCount(zikrKey: current.arabic, count: 1);
+
+    setState(() {
+      _isCountingPulse = true;
+    });
+    AppHaptics.lightImpact();
+
+    if (_repeatCount < current.repeat) {
+      setState(() => _setRepeatCount(_repeatCount + 1));
+      Future.delayed(const Duration(milliseconds: 120), () {
+        if (mounted) {
+          setState(() => _isCountingPulse = false);
+        }
+      });
+      return;
+    }
+
+    if (_currentIndex < _azkarList.length - 1) {
+      ZikrAudioService.instance.stop();
+      setState(() {
+        _currentIndex++;
+        _isCountingPulse = false;
+      });
+      return;
+    }
+
+    ZikrAudioService.instance.stop();
+    await _completeSession();
+  }
+
+  Future<void> _handleNext() async {
+    ZikrAudioService.instance.stop();
+    if (_currentIndex < _azkarList.length - 1) {
+      setState(() {
+        _currentIndex++;
+      });
+      return;
+    }
+
+    await _completeSession();
+  }
+
+  void _handleBack() {
+    ZikrAudioService.instance.stop();
+    if (_currentIndex > 0) {
+      setState(() {
+        _currentIndex--;
+      });
+      return;
+    }
+
+    Navigator.pop(context);
+  }
+
+  Future<void> _completeSession() async {
+    ZikrAudioService.instance.stop();
+    await StorageService.recordSessionCompletion();
+    if (const ['morning', 'evening', 'sleep'].contains(widget.category.id)) {
+      await StorageService.markDailyPathComplete(widget.category.id);
+    }
+    setState(() => _completed = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final lang = loc?.locale.languageCode ?? 'ku';
+    final isKurdish = lang == 'ku';
+    final isArabic = lang == 'ar';
+
+    if (_completed) {
+      return _buildCompletedScreen(isKurdish, isArabic, loc);
+    }
+
+    if (_azkarList.isEmpty) {
+      return Scaffold(
+        backgroundColor: AppColors.darkBg,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final current = _azkarList[_currentIndex];
+
+    return Scaffold(
+      backgroundColor: AppColors.darkBg,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.darkBg,
+              AppColors.darkBgAlt,
+              AppColors.softSurface,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.panelColor,
+                    border: Border.all(color: AppColors.panelBorderColor),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          ZikrAudioService.instance.stop();
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(Icons.arrow_back,
+                              size: 16, color: AppColors.cream),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.category.getTitle(lang),
+                              style: (isKurdish || isArabic)
+                                  ? AppTheme.kurdishTitle(
+                                      fontSize: 15, color: AppColors.cream)
+                                  : AppTheme.englishText(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              '${_currentIndex + 1} / ${_azkarList.length}',
+                              style: AppTheme.englishText(
+                                  fontSize: 11, color: AppColors.faintText),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.share_outlined, color: AppColors.gold),
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (_) =>
+                                DuaCardGeneratorDialog(azkar: current),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: _azkarList.isNotEmpty
+                        ? (_currentIndex + 1) / _azkarList.length
+                        : 0.0,
+                    backgroundColor: AppColors.panelColor,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.gold),
+                    minHeight: 4,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _handleCount,
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: AppColors.panelColor,
+                            border:
+                                Border.all(color: AppColors.panelBorderColor),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Column(
+                            children: [
+                              if (ZikrAudioService.hasAudioForCategory(widget.category.id)) ...[
+                                Align(
+                                  alignment: AlignmentDirectional.centerStart,
+                                  child: _buildAudioButton(current, isKurdish, lang),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                              Text(
+                                current.displayArabic,
+                                style: AppTheme.arabicTitle(fontSize: 24),
+                                textAlign: TextAlign.center,
+                                textDirection: TextDirection.rtl,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // Meaning Section: toggle between Kurdish and English
+                        () {
+                          final hasKurdish = current.kurdishTranslation.trim().isNotEmpty;
+                          final hasEnglish = current.translation.trim().isNotEmpty;
+                          final hasBoth = hasKurdish && hasEnglish;
+                          final bool preferEnglish = _showEnglishMode ?? (lang == 'en');
+                          final bool showEnglish = (preferEnglish && hasEnglish) || !hasKurdish;
+                          final bool hasContent = hasKurdish || hasEnglish;
+
+                          if (!hasContent) return const SizedBox.shrink();
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: AlignmentDirectional.centerStart,
+                                      child: GestureDetector(
+                                        onTap: hasBoth
+                                            ? () {
+                                                AppHaptics.selectionClick();
+                                                setState(() {
+                                                  _showEnglishMode = !showEnglish;
+                                                });
+                                              }
+                                            : null,
+                                        child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: showEnglish
+                                            ? const Color(0xFF3B82F6)
+                                                .withValues(alpha: 0.16)
+                                            : AppColors.gold
+                                                .withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: showEnglish
+                                              ? const Color(0xFF60A5FA)
+                                                  .withValues(alpha: 0.45)
+                                              : AppColors.gold
+                                                  .withValues(alpha: 0.35),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            showEnglish
+                                                ? Icons.language_rounded
+                                                : Icons.menu_book_rounded,
+                                            size: 14,
+                                            color: showEnglish
+                                                ? const Color(0xFF93C5FD)
+                                                : AppColors.gold,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            showEnglish
+                                                ? (isKurdish
+                                                    ? 'مانای ئینگلیزی'
+                                                    : (lang == 'ar'
+                                                        ? 'الترجمة بالإنجليزية'
+                                                        : 'English Translation'))
+                                                : (isKurdish
+                                                    ? 'مانای کوردی'
+                                                    : (lang == 'ar'
+                                                        ? 'المعنى بالكردية'
+                                                        : 'Kurdish Meaning')),
+                                            style: showEnglish
+                                                ? const TextStyle(
+                                                    fontSize: 11,
+                                                    color: Color(0xFF93C5FD),
+                                                    fontWeight: FontWeight.bold,
+                                                  )
+                                                : AppTheme.kurdishText(
+                                                    fontSize: 11,
+                                                    color: AppColors.gold,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                          ),
+                                          if (hasBoth) ...[
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 5,
+                                                      vertical: 1.5),
+                                              decoration: BoxDecoration(
+                                                color: showEnglish
+                                                    ? const Color(0xFF3B82F6)
+                                                        .withValues(alpha: 0.25)
+                                                    : AppColors.gold
+                                                        .withValues(alpha: 0.2),
+                                                borderRadius:
+                                                    BorderRadius.circular(5),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.swap_horiz_rounded,
+                                                    size: 12,
+                                                    color: showEnglish
+                                                        ? const Color(0xFF93C5FD)
+                                                        : AppColors.gold,
+                                                  ),
+                                                  const SizedBox(width: 3),
+                                                  Text(
+                                                    showEnglish
+                                                        ? (isKurdish
+                                                            ? 'کوردی'
+                                                            : (isArabic ? 'كردي' : 'Kurdish'))
+                                                        : (isArabic ? 'الإنجليزية' : 'English'),
+                                                    style: TextStyle(
+                                                      fontSize: 9.5,
+                                                      color: showEnglish
+                                                          ? const Color(
+                                                              0xFF93C5FD)
+                                                          : AppColors.gold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                   ),
+                                 ),
+                               ),
+                             ],
+                           ),
+                              const SizedBox(height: 8),
+                              Text(
+                                showEnglish
+                                    ? current.translation
+                                    : current.kurdishTranslation,
+                                style: showEnglish
+                                    ? AppTheme.englishText(
+                                        color: AppColors.cream
+                                            .withValues(alpha: 0.95),
+                                        fontSize: 14,
+                                      ).copyWith(height: 1.6)
+                                    : AppTheme.kurdishText(
+                                        color: AppColors.cream
+                                            .withValues(alpha: 0.95),
+                                        fontSize: 14,
+                                        height: 1.6,
+                                      ),
+                                textAlign: showEnglish
+                                    ? TextAlign.left
+                                    : TextAlign.right,
+                                textDirection: showEnglish
+                                    ? TextDirection.ltr
+                                    : TextDirection.rtl,
+                              ),
+                            ],
+                          );
+                        }(),
+                        const SizedBox(height: 28),
+                        Center(
+                          child: AnimatedScale(
+                            scale: _isCountingPulse ? 1.06 : 1.0,
+                            duration: const Duration(milliseconds: 120),
+                            curve: Curves.easeOut,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 30, vertical: 22),
+                              decoration: BoxDecoration(
+                                color: AppColors.gold.withValues(alpha: 0.08),
+                                border: Border.all(
+                                    color:
+                                        AppColors.gold.withValues(alpha: 0.28)),
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    isKurdish
+                                        ? 'ژمارە: ${current.repeatLabel}'
+                                        : (isArabic
+                                            ? 'العدد: ${current.repeatLabel}'
+                                            : 'Repeat: ${current.repeatLabel}'),
+                                    style: (isKurdish || isArabic)
+                                        ? AppTheme.kurdishText(
+                                            fontSize: 11,
+                                            color: AppColors.faintText,
+                                            fontWeight: FontWeight.w600)
+                                        : AppTheme.englishText(
+                                            fontSize: 11,
+                                            color: AppColors.faintText,
+                                            fontWeight: FontWeight.w600),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '$_repeatCount / ${current.repeatLabel}',
+                                    style: AppTheme.englishTitle(
+                                        fontSize: 30, color: AppColors.gold),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _repeatCount >= current.repeat
+                                        ? (isKurdish
+                                            ? 'تەواوبوو'
+                                            : (isArabic
+                                                ? 'تم الانتهاء'
+                                                : 'Completed'))
+                                        : (() {
+                                            final remaining =
+                                                current.repeat - _repeatCount;
+                                            if (isArabic) {
+                                              if (remaining == 1) return 'اضغط مرة واحدة';
+                                              if (remaining == 2) return 'اضغط مرتين';
+                                              if (remaining >= 3 && remaining <= 10) {
+                                                return 'اضغط $remaining مرات';
+                                              }
+                                              return 'اضغط $remaining مرة';
+                                            }
+                                            if (remaining == 1) {
+                                              return isKurdish
+                                                  ? 'یەک جار بکە'
+                                                  : 'Tap 1 time';
+                                            }
+                                            return isKurdish
+                                                ? 'بۆ $remaining جار بکە'
+                                                : 'Tap $remaining times';
+                                          }()),
+                                    style: (isKurdish || isArabic)
+                                        ? AppTheme.kurdishText(
+                                            color: AppColors.cream,
+                                            fontSize: 12)
+                                        : AppTheme.englishText(
+                                            color: AppColors.cream,
+                                            fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ...List.generate(
+                              current.repeat > 10 ? 10 : current.repeat,
+                              (i) => Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 3),
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: i < _repeatCount
+                                        ? AppColors.gold
+                                        : AppColors.panelColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 18),
+                child: Row(
+                  children: [
+                    // 1. Back / Previous (<)
+                    Expanded(
+                      child: SizedBox(
+                        height: 54,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.faintText,
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            side: BorderSide(color: AppColors.panelBorderColor),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18)),
+                          ),
+                          onPressed: _handleBack,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.chevron_left_rounded,
+                                    size: 18, color: AppColors.faintText),
+                                const SizedBox(width: 4),
+                                Text(
+                                  isKurdish
+                                      ? 'گەڕانەوە'
+                                      : (lang == 'ar' ? 'السابق' : 'Back'),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: (isKurdish || isArabic)
+                                      ? AppTheme.kurdishTitle(
+                                          fontSize: 14,
+                                          color: AppColors.faintText)
+                                      : AppTheme.englishText(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.faintText),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // 2. Count (Center)
+                    Expanded(
+                      child: SizedBox(
+                        height: 54,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.gold,
+                            foregroundColor: AppColors.darkBg,
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18)),
+                            elevation: 0,
+                          ),
+                          onPressed: _handleCount,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              isKurdish
+                                  ? 'ژماردن'
+                                  : (isArabic ? 'تسبيح' : 'Count'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: (isKurdish || isArabic)
+                                  ? AppTheme.kurdishTitle(
+                                      fontSize: 15, color: AppColors.darkBg)
+                                  : AppTheme.englishTitle(
+                                      fontSize: 15, color: AppColors.darkBg),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // 3. Next (>)
+                    Expanded(
+                      child: SizedBox(
+                        height: 54,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.panelColor,
+                            foregroundColor: AppColors.cream,
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18)),
+                            side: BorderSide(color: AppColors.panelBorderColor),
+                            elevation: 0,
+                          ),
+                          onPressed: _handleNext,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  isKurdish
+                                  ? 'دواتر'
+                                  : (isArabic ? 'التالي' : 'Next'),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: (isKurdish || isArabic)
+                                      ? AppTheme.kurdishTitle(
+                                          fontSize: 14,
+                                          color: AppColors.cream)
+                                      : AppTheme.englishText(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.cream),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(Icons.chevron_right_rounded,
+                                    size: 18, color: AppColors.cream),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompletedScreen(bool isKurdish, bool isArabic, AppLocalizations? loc) {
+    return Scaffold(
+      backgroundColor: AppColors.darkBg,
+      body: Center(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.check_circle_outline_rounded, size: 68, color: AppColors.gold),
+                const SizedBox(height: 24),
+                Text(
+                  isKurdish
+                      ? 'خوای گەورە پاداشتت بداتەوە!'
+                      : (isArabic
+                          ? 'جزاك الله خيراً وتقبل منك!'
+                          : 'Session Completed!'),
+                  style: (isKurdish || isArabic)
+                      ? AppTheme.kurdishTitle(fontSize: 22, color: AppColors.gold)
+                      : AppTheme.englishTitle(
+                          fontSize: 22, color: AppColors.gold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  isKurdish
+                      ? 'هەموو زیکرەکانی ئەم بەشەت بە سەرکەوتوویی خوێندەوە.'
+                      : (isArabic
+                          ? 'لقد أكملت قراءة جميع أذكار هذا القسم بنجاح.'
+                          : 'You have completed all Azkar in this category.'),
+                  style: (isKurdish || isArabic)
+                      ? AppTheme.kurdishText(
+                          color: AppColors.mutedText, fontSize: 14)
+                      : AppTheme.englishText(
+                          color: AppColors.mutedText, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 36),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.gold,
+                    foregroundColor: AppColors.darkBg,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    isKurdish
+                        ? 'گەڕانەوە بۆ سەرەتا'
+                        : (isArabic ? 'العودة للرئيسية' : 'Return Home'),
+                    style: (isKurdish || isArabic)
+                        ? AppTheme.kurdishTitle(
+                            fontSize: 15, color: AppColors.darkBg)
+                        : AppTheme.englishTitle(
+                            fontSize: 15, color: AppColors.darkBg),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAudioButton(Azkar zikr, bool isKurdish, String lang) {
+    final zikrId = zikr.id ?? (_currentIndex + 1);
+    final itemKey = 'zikr_${widget.category.id}_${zikrId}_$_currentIndex';
+    final isArabic = lang == 'ar';
+
+    return ValueListenableBuilder<String?>(
+      valueListenable: ZikrAudioService.instance.currentlyPlayingKeyNotifier,
+      builder: (context, activeKey, _) {
+        return StreamBuilder<PlayerState>(
+          stream: ZikrAudioService.instance.itemPlayerStateStream,
+          builder: (context, snapshot) {
+            final playerState = snapshot.data ??
+                ZikrAudioService.instance.player.playerState;
+            final isPlaying = playerState.playing;
+            final processingState = playerState.processingState;
+            final isTargetItem = activeKey == itemKey;
+            final isCompleted = processingState == ProcessingState.completed;
+            final isBuffering = processingState == ProcessingState.buffering ||
+                processingState == ProcessingState.loading;
+            final isThisLoading = isTargetItem && isBuffering && !isCompleted;
+            final isThisPlaying =
+                isTargetItem && isPlaying && !isBuffering && !isCompleted;
+            final isThisPaused = isTargetItem &&
+                !isPlaying &&
+                !isBuffering &&
+                !isCompleted &&
+                (processingState == ProcessingState.ready ||
+                    processingState == ProcessingState.idle);
+
+            final String label;
+            final IconData icon;
+            if (isThisLoading) {
+              label = isKurdish
+                  ? 'چاوەڕێبە...'
+                  : (isArabic ? 'جاري التحميل...' : 'Loading...');
+              icon = Icons.hourglass_top_rounded;
+            } else if (isThisPlaying) {
+              label = isKurdish
+                  ? 'ڕاگرتن'
+                  : (isArabic ? 'إيقاف مؤقت' : 'Pause');
+              icon = Icons.pause_circle_filled_rounded;
+            } else if (isThisPaused) {
+              label = isKurdish
+                  ? 'دەستپێکردنەوە'
+                  : (isArabic ? 'استئناف' : 'Resume');
+              icon = Icons.play_circle_fill_rounded;
+            } else {
+              label = isKurdish
+                  ? 'خوێندنەوەی دەنگی'
+                  : (isArabic ? 'استماع' : 'Listen');
+              icon = Icons.volume_up_rounded;
+            }
+
+            final isActive = isThisPlaying || isThisLoading || isThisPaused;
+
+            return GestureDetector(
+              onTap: () {
+                ZikrAudioService.instance.toggleZikrItemAudio(
+                  zikr,
+                  _currentIndex,
+                  widget.category.id,
+                );
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? AppColors.gold.withValues(alpha: 0.22)
+                      : AppColors.gold.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isActive
+                        ? AppColors.gold
+                        : AppColors.gold.withValues(alpha: 0.35),
+                    width: isActive ? 1.5 : 1.0,
+                  ),
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isThisLoading)
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(AppColors.gold),
+                          ),
+                        )
+                      else
+                        Icon(
+                          icon,
+                          color: AppColors.gold,
+                          size: 20,
+                        ),
+                      const SizedBox(width: 8),
+                      Text(
+                        label,
+                        style: isKurdish
+                            ? AppTheme.kurdishTitle(
+                                fontSize: 12.5, color: AppColors.gold)
+                            : (isArabic
+                                ? AppTheme.arabicTitle(
+                                    fontSize: 12.5, color: AppColors.gold)
+                                : AppTheme.englishTitle(
+                                    fontSize: 12.5, color: AppColors.gold)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
