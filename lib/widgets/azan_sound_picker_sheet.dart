@@ -17,96 +17,120 @@ class AzanSoundPickerSheet {
       'makkah',
       'Makkah Adhan',
       'بانگی مەککەی پیرۆز',
+      'بانگێ مەککەیا پیرۆز',
       'Masjid al-Haram, Makkah Mukarramah',
       'مزگەوتی حەڕام، مەککەی پیرۆز',
+      'مزگەفتا حەرام، مەککەیا پیرۆز',
       Icons.mosque_rounded,
     ),
     _AzanOption(
       'madinah',
       'Madinah Adhan',
       'بانگی مەدینەی منەوەرە',
+      'بانگێ مەدینەیا منەوەرە',
       'Al-Masjid an-Nabawi, Madinah',
       'مزگەوتی پێغەمبەر ﷺ، مەدینە',
+      'مزگەفتا پێغەمبەری ﷺ، مەدینە',
       Icons.mosque_rounded,
     ),
     _AzanOption(
       'aqsa',
       'Al-Aqsa Adhan',
       'بانگی مزگەوتی ئەقسا',
+      'بانگێ مزگەفتا ئەقسا',
       'Al-Masjid al-Aqsa, Jerusalem (Al-Quds)',
       'مزگەوتی پیرۆزی ئەقسا، قودس',
+      'مزگەفتا پیرۆزا ئەقسا، قودس',
       Icons.mosque_rounded,
     ),
     _AzanOption(
       'abdulbasit',
       'Abdul Basit Adhan',
       'بانگی شێخ عەبدولباست',
+      'بانگێ شێخ عەبدولباست',
       'Classic Egyptian Studio Adhan',
       'دەنگی شێخ عەبدولباست عەبدولسەمەد',
+      'دەنگێ شێخ عەبدولباست عەبدولسەمەد',
       Icons.mic_rounded,
     ),
     _AzanOption(
       'mishary',
       'Mishary Alafasy Adhan',
       'بانگی میشاری ئەلعەفاسی',
+      'بانگێ میشاری ئەلعەفاسی',
       'Sheikh Mishary Rashid Alafasy',
       'دەنگی شێخ میشاری ڕاشد ئەلعەفاسی',
+      'دەنگێ شێخ میشاری ڕاشد ئەلعەفاسی',
       Icons.mic_rounded,
     ),
     _AzanOption(
       'haram_classic',
       'Haram Classic',
       'بانگی کلاسیکی حەڕەم',
+      'بانگێ کلاسیک یێ حەرەمێ',
       'Historic Makkah Haram Recitation',
       'بانگی کۆن و مێژوویی حەڕەمی پیرۆز',
+      'بانگێ کەڤن و دیرۆکی یێ حەرەما پیرۆز',
       Icons.mosque_rounded,
     ),
     _AzanOption(
       'riyadh',
       'Riyadh Adhan',
       'بانگی ڕیاز',
+      'بانگێ ڕیاز',
       'Saudi Mosque Style Adhan',
       'بانگی شێوازی مزگەوتەکانی ڕیاز',
+      'بانگێ شێوازێ مزگەفتێن ڕیاز',
       Icons.mosque_rounded,
     ),
     _AzanOption(
       'dubai',
       'Dubai Adhan',
       'بانگی دوبەی',
+      'بانگێ دوبەی',
       'Grand Mosque of Dubai Adhan',
       'بانگی مزگەوتی گەورەی دوبەی',
+      'بانگێ مزگەفتا مەزنا دوبەی',
       Icons.mosque_rounded,
     ),
     _AzanOption(
       'azan_short',
       'Azan Short (Mishary)',
       'بانگی کورتی ئەلعەفاسی',
+      'بانگێ کورت یێ ئەلعەفاسی',
       'Short Mishary Alafasy ringtone tone',
       'بانگی کورتی شێخ میشاری ڕاشد ئەلعەفاسی',
+      'بانگێ کورت یێ شێخ میشاری ڕاشد ئەلعەفاسی',
       Icons.notifications_active_rounded,
     ),
     _AzanOption(
       'azan_fajr',
       'Special Adhan',
       'بانگ',
+      'بانگێ سپێدێ',
       'Melodic Fajr Adhan tone',
       'بانگ و دەنگی تایبەتی نوێژی بەیانی',
+      'بانگ و دەنگێ تایبەت یێ نڤێژا سپێدێ',
       Icons.wb_twilight_rounded,
     ),
     _AzanOption(
       'vibrate',
       'Vibration Only',
       'تەنها لەرزین (ڤایبرەیشن)',
+      'بتنێ لەرزین (ڤایبرەیشن)',
       'Vibrate at prayer times without sound',
       'لەرزین لە کاتی بانگدان بەبێ دەنگ',
+      'لەرزین ل دەمێ بانگی بێی دەنگ',
       Icons.vibration_rounded,
     ),
     _AzanOption(
       'silent',
       'Silent Mode',
       'بێ دەنگ',
+      'بێ دەنگ',
       'Visual notification only',
       'ئاگادارکردنەوەی بینراو بەبێ دەنگ و لەرزین',
+      'ئاگەهدارییا دیتنێ بێ دەنگ و لەرزین',
       Icons.notifications_off_rounded,
     ),
   ];
@@ -263,7 +287,9 @@ class AzanSoundPickerSheet {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        isKurdish ? option.nameKu : option.name,
+                                        isKurmanji
+                                            ? option.nameKmr
+                                            : (isKurdish ? option.nameKu : option.name),
                                         textDirection: isKurdish ? TextDirection.rtl : TextDirection.ltr,
                                         style: isKurdish
                                             ? AppTheme.kurdishTitle(
@@ -278,7 +304,9 @@ class AzanSoundPickerSheet {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        isKurdish ? option.descKu : option.desc,
+                                        isKurmanji
+                                            ? option.descKmr
+                                            : (isKurdish ? option.descKu : option.desc),
                                         style: AppTheme.englishText(
                                           fontSize: 11,
                                           color: selected
@@ -293,7 +321,7 @@ class AzanSoundPickerSheet {
                                   IconButton(
                                     tooltip: playing
                                         ? (isKurmanji ? 'ڕاوەستاندن' : (isKurdish ? 'ڕاگرتن' : 'Stop'))
-                                        : (isKurdish ? 'گوێگرتن' : 'Listen'),
+                                        : (isKurmanji ? 'گوهدان' : (isKurdish ? 'گوێگرتن' : 'Listen')),
                                     icon: Icon(
                                       playing
                                           ? Icons.stop_circle_rounded
@@ -359,15 +387,20 @@ class _AzanOption {
     this.id,
     this.name,
     this.nameKu,
+    this.nameKmr,
     this.desc,
     this.descKu,
+    this.descKmr,
     this.icon,
   );
 
   final String id;
   final String name;
   final String nameKu;
+  final String nameKmr;
   final String desc;
   final String descKu;
+  final String descKmr;
   final IconData icon;
 }
+

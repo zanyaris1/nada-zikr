@@ -1816,7 +1816,7 @@ class _MoodVerseCardState extends State<_MoodVerseCard> {
               ),
               IconButton(
                 tooltip: isKurmanji
-                    ? 'بەلاڤکرن'
+                    ? 'پارڤەکرن'
                     : (isKurdish
                         ? 'هاوبەشکردن'
                         : (widget.locale == 'ar' ? 'مشاركة' : 'Share')),

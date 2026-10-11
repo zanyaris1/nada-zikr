@@ -254,8 +254,8 @@ class _FocusedReadingSheetState extends State<FocusedReadingSheet> {
                               Text(
                                 isKurmanji
                                     ? (_showTranslation
-                                        ? 'ڤەشارتنا مانایێ'
-                                        : 'نیشاندانا مانایێ')
+                                        ? 'ڤەشارتنا ڕامانێ'
+                                        : 'نیشاندانا ڕامانێ')
                                     : (isKurdish
                                         ? (_showTranslation
                                             ? 'شاردنەوەی مانا'
@@ -367,7 +367,7 @@ class _FocusedReadingSheetState extends State<FocusedReadingSheet> {
                         const SizedBox(width: 10),
                         Text(
                           isKurmanji
-                              ? (_count > 0 ? 'هاتیە خاندن: $_count' : 'بۆ ژمارتنێ دەست لێبدە')
+                              ? (_count > 0 ? 'هاتیە خواندن: $_count' : 'بۆ هژمارتنێ دەست لێبدە')
                               : (isKurdish
                                   ? (_count > 0 ? 'خوێندراوە: $_count' : 'بۆ ژماردن دەست لێبدە')
                                   : (_count > 0 ? 'Recited: $_count' : 'Tap to Count')),

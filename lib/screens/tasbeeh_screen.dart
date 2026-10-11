@@ -312,7 +312,7 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
                             const SizedBox(height: 4),
                             Text(
                               isKurmanji
-                                  ? 'بۆ ژمارتنێ ل هەر جهەکێ شاشەیێ کلیک بکە'
+                                  ? 'بۆ هژمارتنێ ل هەر جهەکێ شاشەیێ کلیک بکە'
                                   : (isKurdish
                                       ? 'بۆ ژماردن لە هەر شوێنێكی شاشەکە کلیک بکە'
                                       : (isArabic
@@ -347,7 +347,7 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
                             size: 28,
                           ),
                           tooltip: isKurmanji
-                              ? 'دوبارەکرن'
+                              ? 'سفرکرن'
                               : (isKurdish ? 'ڕیستکردن' : 'Reset'),
                         ),
                       ),
@@ -532,7 +532,7 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
                             const SizedBox(height: 8),
                             Text(
                               isKurmanji
-                                  ? 'ژمارتن'
+                                  ? 'هژمارتن'
                                   : (isKurdish
                                       ? 'ژماردن'
                                       : (isArabic ? 'اضغط للتسبيح' : 'Tap to count')),

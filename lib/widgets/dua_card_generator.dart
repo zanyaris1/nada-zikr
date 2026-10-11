@@ -16,7 +16,7 @@ class DuaCardGeneratorDialog extends StatelessWidget {
     buffer.writeln(azkar.arabic);
     buffer.writeln();
     if (azkar.kurdishTranslation.isNotEmpty) {
-      buffer.writeln(isKurmanji ? '📖 مانایا کوردی:' : '📖 مانای کوردی:');
+      buffer.writeln(isKurmanji ? '📖 ڕامانا کوردی:' : '📖 مانای کوردی:');
       buffer.writeln(azkar.kurdishTranslation);
       buffer.writeln();
     }
@@ -31,7 +31,7 @@ class DuaCardGeneratorDialog extends StatelessWidget {
       buffer.writeln();
     }
     buffer.writeln(isKurmanji
-        ? 'ب ڕێکا بەرنامێ نەدا (Nada) بۆ زکر و دوعایان 🌟'
+        ? 'ب ڕێکا بەرنامەیێ نەدا (Nada) بۆ زکر و دوعایان 🌟'
         : (isKurdish
             ? 'لە ڕێگەی ئەپی نەدا (Nada) بۆ زیکر و دوعاکان 🌟'
             : 'Via Nada App for Azkar & Supplications 🌟'));
@@ -164,7 +164,7 @@ class DuaCardGeneratorDialog extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     child: Text(
                       isKurmanji
-                          ? 'بەلاڤکرنا کارتا زکری'
+                          ? 'پارڤەکرنا کارتا زکری'
                           : (isKurdish ? 'بڵاوکردنەوەی کارتی زیکر' : 'Share Dua Card'),
                       style: isKurdishAny ? AppTheme.kurdishTitle(fontSize: 14, color: AppColors.darkBg) : AppTheme.englishTitle(fontSize: 14, color: AppColors.darkBg),
                     ),

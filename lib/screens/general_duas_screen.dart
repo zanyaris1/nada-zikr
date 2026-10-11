@@ -327,7 +327,7 @@ class _GeneralDuasScreenState extends State<GeneralDuasScreen> {
                               }
                             },
                             lang: lang,
-                            meaningBadgeKurdishLabel: isKurmanji ? '📖 مانایا دوعایێ (کوردی)' : '📖 مانای دوعا (کوردی)',
+                            meaningBadgeKurdishLabel: isKurmanji ? '📖 ڕامانا دوعایێ (کوردی)' : '📖 مانای دوعا (کوردی)',
                             isDisplayingEnglish: isDisplayingEnglish,
                             onToggleLanguage: () {
                               AppHaptics.selectionClick();

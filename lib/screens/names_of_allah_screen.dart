@@ -683,14 +683,14 @@ class _NameOfAllahListCard extends StatelessWidget {
                                     Text(
                                       isDisplayingEnglish
                                           ? (isKurmanjiLang
-                                              ? 'مانایا ئینگلیزی'
+                                              ? 'ڕامانا ئینگلیزی'
                                               : (isKurdishLang
                                                   ? 'مانای ئینگلیزی'
                                                   : (lang == 'ar'
                                                       ? 'الترجمة بالإنجليزية'
                                                       : 'English Meaning')))
                                           : (isKurmanjiLang
-                                              ? 'مانایا کوردی'
+                                              ? 'ڕامانا کوردی'
                                               : (isKurdishLang
                                                   ? 'مانای کوردی'
                                                   : (lang == 'ar'
@@ -1043,14 +1043,14 @@ class _NameDetailModalSheetState extends State<_NameDetailModalSheet> {
                                       Text(
                                         isDisplayingEnglish
                                             ? (isKurmanjiLang
-                                                ? 'مانایا ئینگلیزی'
+                                                ? 'ڕامانا ئینگلیزی'
                                                 : (isKurdishLang
                                                     ? 'مانای ئینگلیزی'
                                                     : (widget.lang == 'ar'
                                                         ? 'الترجمة بالإنجليزية'
                                                         : 'English Meaning')))
                                             : (isKurmanjiLang
-                                                ? 'مانایا کوردی'
+                                                ? 'ڕامانا کوردی'
                                                 : (isKurdishLang
                                                     ? 'مانای کوردی'
                                                     : (widget.lang == 'ar'

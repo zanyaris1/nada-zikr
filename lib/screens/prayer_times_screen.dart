@@ -160,7 +160,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
 
     final String title = isNotificationMissing
         ? (lang == 'kmr'
-            ? 'ئاگەهدارکرن نەچالاكن'
+            ? 'ئاگەهداری نەچالاکن'
             : (isKurdish
                 ? 'ئاگادارکردنەوەکان ناچالاکن'
                 : (lang == 'ar' ? 'الإشعارات معطلة' : 'Notifications are disabled')))
@@ -182,7 +182,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
 
     final String subtitle = isNotificationMissing
         ? (lang == 'kmr'
-            ? 'هیڤییە ڕێگێ بدە ئاگەهدارکرنان بۆ گەهشتنا بانگی و دەمێن نڤێژێ.'
+            ? 'هیڤییە ڕێگێ بدە ئاگەهدارییان بۆ گەهشتنا بانگی و دەمێن نڤێژێ.'
             : (isKurdish
                 ? 'تکایە ڕێگە بە ئاگادارکردنەوە بدە بۆ گەیشتنی بانگ و کاتی نوێژەکان.'
                 : (lang == 'ar'
@@ -472,7 +472,13 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
                                 IconButton(
                                   padding: const EdgeInsets.all(4),
                                   constraints: const BoxConstraints(),
-                                  tooltip: 'Monthly Timetable',
+                                  tooltip: lang == 'kmr'
+                                      ? 'خشتەیێ مەهانە یێ دەمێن نڤێژێ'
+                                      : (isKurdish
+                                          ? 'خشتەی مانگانەی کاتەکانی بانگ'
+                                          : (lang == 'ar'
+                                              ? 'جدول أوقات الصلاة الشهري'
+                                              : 'Monthly Timetable')),
                                   icon: Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
@@ -494,7 +500,13 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
                                 IconButton(
                                   padding: const EdgeInsets.all(4),
                                   constraints: const BoxConstraints(),
-                                  tooltip: 'Prayer Settings',
+                                  tooltip: lang == 'kmr'
+                                      ? 'ڕێکخستنێن دەمێن نڤێژێ'
+                                      : (isKurdish
+                                          ? 'ڕێکخستنەکانی کاتی بانگ'
+                                          : (lang == 'ar'
+                                              ? 'إعدادات الصلاة'
+                                              : 'Prayer Settings')),
                                   icon: Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
@@ -517,7 +529,13 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
                                 IconButton(
                                   padding: const EdgeInsets.all(4),
                                   constraints: const BoxConstraints(),
-                                  tooltip: 'Azan sound',
+                                  tooltip: lang == 'kmr'
+                                      ? 'دەنگێ بانگی'
+                                      : (isKurdish
+                                          ? 'دەنگی بانگدان'
+                                          : (lang == 'ar'
+                                              ? 'صوت الأذان'
+                                              : 'Azan sound')),
                                   icon: Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(

@@ -275,7 +275,7 @@ class _LocationSelectorSheetState extends State<LocationSelectorSheet> {
             ),
             subtitle: Text(
               isKurmanji
-                  ? 'دەمی بانگی ل دووڤ جهێ تە یێ دروست و ڕاستەوخۆ دهێتە هژمارتن'
+                  ? 'دەمێ بانگی ل دویڤ جهێ تە یێ دروست و ڕاستەوخۆ دهێتە هژمارتن'
                   : (isKurdish ? 'کاتی بانگ بەپێی شوێنی وورد و ڕاستەوخۆت حیساب دەکرێت' : 'Exact local coordinates via GPS'),
               style: AppTheme.kurdishText(fontSize: 11, color: AppColors.faintText),
             ),
@@ -294,7 +294,7 @@ class _LocationSelectorSheetState extends State<LocationSelectorSheet> {
           padding: const EdgeInsets.only(left: 8, right: 8, bottom: 8),
           child: Text(
             isKurmanji
-                ? 'هەلبژارتنا باژێری ل دووڤ وەلاتان:'
+                ? 'هەلبژارتنا باژێری ل دویڤ وەلاتان:'
                 : (isKurdish ? 'هەڵبژاردنی شار بەپێی وڵات:' : 'Select city by country:'),
             style: AppTheme.kurdishTitle(fontSize: 14, color: AppColors.gold),
           ),

@@ -670,7 +670,7 @@ class _QuranAudioPlayerWidgetState extends State<QuranAudioPlayerWidget> {
                                               ? 'متوقف مؤقتاً'
                                               : 'Paused'))))
                               : (isKurmanji
-                                  ? 'گوێ ل ڕێبەریا تلاوەتێ بگرە'
+                                  ? 'گوهێ خۆ بدە تلاوەتێ'
                                   : (isKurdish
                                       ? 'گوێ لە ڕێبەرایەتی تلاوەت بگرە'
                                       : (lang == 'ar'

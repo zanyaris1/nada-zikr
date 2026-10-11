@@ -163,7 +163,7 @@ class SpiritualContentCard extends StatelessWidget {
                               Text(
                                 isDisplayingEnglish
                                     ? (isKurmanji
-                                        ? 'مانایا ئینگلیزی'
+                                        ? 'ڕامانا ئینگلیزی'
                                         : (isKurdish
                                             ? 'مانای ئینگلیزی'
                                             : (isArabic

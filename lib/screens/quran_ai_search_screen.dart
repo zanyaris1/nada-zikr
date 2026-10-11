@@ -683,7 +683,11 @@ ${item.getReason(language)}
 
                 // Copy Button
                 IconButton(
-                  tooltip: 'Copy',
+                  tooltip: language == 'kmr'
+                      ? 'کۆپیکرن'
+                      : (language == 'ku'
+                          ? 'کۆپیکردن'
+                          : (language == 'ar' ? 'نسخ' : 'Copy')),
                   style: IconButton.styleFrom(
                     backgroundColor: AppColors.darkBgAlt,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -694,7 +698,11 @@ ${item.getReason(language)}
 
                 // Share Button
                 IconButton(
-                  tooltip: 'Share',
+                  tooltip: language == 'kmr'
+                      ? 'پارڤەکرن'
+                      : (language == 'ku'
+                          ? 'هاوبەشکردن'
+                          : (language == 'ar' ? 'مشاركة' : 'Share')),
                   style: IconButton.styleFrom(
                     backgroundColor: AppColors.darkBgAlt,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

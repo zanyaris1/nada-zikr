@@ -432,11 +432,11 @@ class PrayerTimeItem {
     if (locale == 'kmr') {
       switch (id) {
         case 'fajr':
-          return 'بەیانی';
+          return 'سپێدە';
         case 'sunrise':
           return 'ڕۆژهەلات';
         case 'dhuhr':
-          return 'نیڤرۆ';
+          return 'نیڤڕۆ';
         case 'asr':
           return 'ئێڤاری';
         case 'maghrib':

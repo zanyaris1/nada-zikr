@@ -317,7 +317,7 @@ class _HadithScreenState extends State<HadithScreen> {
                             },
                             lang: lang,
                             meaningBadgeKurdishLabel: isKurmanji
-                                ? '📜 مانایا فەرموودێ (کوردی)'
+                                ? '📜 ڕامانا فەرموودێ (کوردی)'
                                 : '📜 مانای فەرموودە (کوردی)',
                             isDisplayingEnglish: isDisplayingEnglish,
                             onToggleLanguage: () {
