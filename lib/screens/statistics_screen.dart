@@ -3038,9 +3038,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     _RankDefinition(
       level: 1,
       titleKu: 'ڕێبواری ڕووناکی',
+      titleKmr: 'ڕێڤینگێ ڕووناهییێ',
       titleAr: 'طالب النور',
       titleEn: 'Seeker of Divine Light',
       subtitleKu: 'دەستپێکی پیرۆزی گەشتی دڵ لە یادی خوادا',
+      subtitleKmr: 'دەستپێکا پیرۆز یا گەشتێ د بیرئینانا خودێ دا',
       subtitleAr: 'بداية المسير المبارك في رحاب ذكر الرحمن',
       subtitleEn: 'The blessed start of your spiritual remembrance journey',
       reqDhikr: 0,
@@ -3051,9 +3053,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     _RankDefinition(
       level: 2,
       titleKu: 'پێشڕەوی چاکە',
+      titleKmr: 'پێشەنگێ چاکیێ',
       titleAr: 'الساعي بالخير',
       titleEn: 'Walker of Goodness',
       subtitleKu: 'هەنگاوی چەسپاو لەسەر ڕێگای گوێڕایەڵی و خێر',
+      subtitleKmr: 'پێنگاڤێن موکوم ل سەر ڕێکا گوهداری و خێرێ',
       subtitleAr: 'خطوات ثابتة ومباركة في دروب الطاعة والخير',
       subtitleEn: 'Steadfast steps in righteous devotion and remembrance',
       reqDhikr: 100,
@@ -3064,9 +3068,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     _RankDefinition(
       level: 3,
       titleKu: 'هۆگری نزا و یاد',
+      titleKmr: 'هۆگرێ دوعا و زکران',
       titleAr: 'المواظب الأوّاب',
       titleEn: 'Mindful Devotee',
       subtitleKu: 'بەردەوامی لە پاڕانەوە، نزا و گەڕانەوە بۆ لای خودا',
+      subtitleKmr: 'بەردەوامی د پارانەڤە و زڤڕین بۆ لایێ خودێ',
       subtitleAr: 'مواظبة خاشعة ورجوع دائم إلى الله بالدعاء',
       subtitleEn: 'Humble persistence in tasbih and heartfelt prayer',
       reqDhikr: 300,
@@ -3077,9 +3083,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     _RankDefinition(
       level: 4,
       titleKu: 'یادکەری دڵئارام',
+      titleKmr: 'زاکرێ دڵئارام',
       titleAr: 'الذاكر المطمئن',
       titleEn: 'Serene Remembrancer',
       subtitleKu: '«بە یادی خودا دڵەکان ئارام دەبن» — دڵێکی پڕ لە هێمنی',
+      subtitleKmr: '«ب زکرێ خودێ دل ئارام دبن» — دلەکێ تژی ئارامی',
       subtitleAr: 'ألا بذكر الله تطمئن القلوب — قلب مفعم بالطمأنينة',
       subtitleEn: 'A tranquil heart illuminated by remembrance',
       reqDhikr: 700,
@@ -3090,9 +3098,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     _RankDefinition(
       level: 5,
       titleKu: 'شەیدای ستایش',
+      titleKmr: 'تەسبیحکەرێ دلسۆز',
       titleAr: 'المسبِّح الأوّاه',
       titleEn: 'Devout Glorifier',
       subtitleKu: 'زمانێک کە هەمیشە بە یادی خودا تەڕ و ڕازاوەیە',
+      subtitleKmr: 'ئەزمانەک کو هەر دەم ب زکرێ خودێ تەڕ و خەملاندییە',
       subtitleAr: 'لسان رطب بذكر الله وتسبيحه في كل حين',
       subtitleEn: 'A tongue perpetually moist with praises of Allah',
       reqDhikr: 1500,
@@ -3103,9 +3113,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     _RankDefinition(
       level: 6,
       titleKu: 'پارێزەری پەیمان',
+      titleKmr: 'پارێزەرێ پەیمانێ',
       titleAr: 'حافظ العهد',
       titleEn: 'Guardian of the Covenant',
       subtitleKu: 'پابەندبوونێکی بێوچان لەسەر یادەکانی بەیانیان و ئێواران',
+      subtitleKmr: 'پێگرییەکا بێڕاوەستان ل سەر زکرێن سپێدە و ئێڤاران',
       subtitleAr: 'ثبات راسخ على أذكار الصباح والمساء والفرائض',
       subtitleEn: 'Unwavering commitment to daily morning and evening adhkar',
       reqDhikr: 3000,
@@ -3116,9 +3128,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     _RankDefinition(
       level: 7,
       titleKu: 'پێشەنگی باوەڕی چەسپاو',
+      titleKmr: 'پێشەنگێ باوەریا چەسپاو',
       titleAr: 'رائد الاستقامة',
       titleEn: 'Vanguard of Steadfastness',
       subtitleKu: 'خاوەن هیممەتێکی بەرز و تەرازوویەکی پڕ لە چاکە',
+      subtitleKmr: 'خۆدان هیمەتەکا بلند و تەرازییەکا تژی ژ چاکیێ',
       subtitleAr: 'همة عالية وثبات عظيم في ميزان الحسنات',
       subtitleEn: 'High devotion and steadfastness in good deeds',
       reqDhikr: 6000,
@@ -3129,9 +3143,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     _RankDefinition(
       level: 8,
       titleKu: 'سەروەری یادی خودا',
+      titleKmr: 'سەروەرێ زکرێ خودێ',
       titleAr: 'خادم الأذكار المبارك',
       titleEn: 'Master of Divine Remembrance',
       subtitleKu: 'لوتکەی سەقامگیری، ئارامی دڵ و نزیکی لە پەروەردگار',
+      subtitleKmr: 'بلنداهییا جێگیری، ئارامییا دلی و نێزیکی ژ خودێ',
       subtitleAr: 'أعلى مراتب الأنس والمواظبة على ذكر الرحمن',
       subtitleEn: 'The highest pinnacle of divine peace and remembrance',
       reqDhikr: 10000,
@@ -3178,6 +3194,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       subtitle: def.getSubtitle(lang),
       tierBadge: _tr(lang,
           ku: 'ئاستی ${def.level} لە ٨',
+          kmr: 'ئاستێ ${def.level} ژ ٨',
           ar: 'المستوى ${def.level} من ٨',
           en: 'Level ${def.level} of 8'),
       requirementText: def.getRequirement(lang),
@@ -3217,9 +3234,11 @@ class _DetailedStats {
 class _RankDefinition {
   final int level;
   final String titleKu;
+  final String? titleKmr;
   final String titleAr;
   final String titleEn;
   final String subtitleKu;
+  final String? subtitleKmr;
   final String subtitleAr;
   final String subtitleEn;
   final int reqDhikr;
@@ -3230,9 +3249,11 @@ class _RankDefinition {
   const _RankDefinition({
     required this.level,
     required this.titleKu,
+    this.titleKmr,
     required this.titleAr,
     required this.titleEn,
     required this.subtitleKu,
+    this.subtitleKmr,
     required this.subtitleAr,
     required this.subtitleEn,
     required this.reqDhikr,
@@ -3242,13 +3263,15 @@ class _RankDefinition {
   });
 
   String getTitle(String lang) {
-    if (lang == 'ku' || lang == 'kmr') return titleKu;
+    if (lang == 'kmr') return titleKmr ?? titleKu;
+    if (lang == 'ku') return titleKu;
     if (lang == 'ar') return titleAr;
     return titleEn;
   }
 
   String getSubtitle(String lang) {
-    if (lang == 'ku' || lang == 'kmr') return subtitleKu;
+    if (lang == 'kmr') return subtitleKmr ?? subtitleKu;
+    if (lang == 'ku') return subtitleKu;
     if (lang == 'ar') return subtitleAr;
     return subtitleEn;
   }
@@ -3350,30 +3373,37 @@ class _SpiritualAchievement {
   double get progress => targetValue > 0 ? (currentValue / targetValue).clamp(0.0, 1.0) : 0.0;
 
   String getTitle(String lang) {
-    if (lang == 'ku') return titleKu;
+    if (lang == 'ku' || lang == 'kmr') return titleKu;
     if (lang == 'ar') return titleAr;
     return titleEn;
   }
 
   String getCategory(String lang) {
-    if (lang == 'ku') return categoryKu;
+    if (lang == 'ku' || lang == 'kmr') return categoryKu;
     if (lang == 'ar') return categoryAr;
     return categoryEn;
   }
 
   String getDesc(String lang) {
-    if (lang == 'ku') return descKu;
+    if (lang == 'ku' || lang == 'kmr') return descKu;
     if (lang == 'ar') return descAr;
     return descEn;
   }
 
   String getHadith(String lang) {
-    if (lang == 'ku') return hadithKu;
+    if (lang == 'ku' || lang == 'kmr') return hadithKu;
     if (lang == 'ar') return hadithAr;
     return hadithEn;
   }
 
   String getUnit(String lang) {
+    if (lang == 'kmr') {
+      if (unitKu == 'ڕۆژ') return 'ڕۆژ';
+      if (unitKu == 'جار') return 'جار';
+      if (unitKu == 'دانیشتن') return 'ڕوونشتن';
+      if (unitKu == 'دوعا') return 'دوعا';
+      return unitKu;
+    }
     if (lang == 'ku') return unitKu;
     if (lang == 'ar') return unitAr;
     return unitEn;

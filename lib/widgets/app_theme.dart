@@ -8,6 +8,7 @@ class AppPalette {
   final String key;
   final String label;
   final String labelKu;
+  final String? labelKmr;
   final String description;
   final bool isDark;
   final Color darkBg;
@@ -29,6 +30,7 @@ class AppPalette {
     required this.key,
     required this.label,
     required this.labelKu,
+    this.labelKmr,
     required this.description,
     required this.isDark,
     required this.darkBg,
@@ -47,7 +49,15 @@ class AppPalette {
     required this.softSurface,
   });
 
-  String getLocalizedLabel(bool isKurdish) => isKurdish ? labelKu : label;
+  String getLocalizedLabel(dynamic langOrIsKurdish) {
+    if (langOrIsKurdish is bool) {
+      return langOrIsKurdish ? labelKu : label;
+    }
+    final lang = langOrIsKurdish.toString();
+    if (lang == 'kmr') return labelKmr ?? labelKu;
+    if (lang == 'ku') return labelKu;
+    return label;
+  }
 }
 
 class AppPalettes {
@@ -56,6 +66,7 @@ class AppPalettes {
     key: 'nuri',
     label: 'Nûrî Emerald',
     labelKu: 'زمردی و زێڕین',
+    labelKmr: 'زومڕووت و زێڕین',
     description: 'Deep Kurdish emerald green with polished gold highlights',
     isDark: true,
     darkBg: Color(0xFF07140E),
@@ -79,6 +90,7 @@ class AppPalettes {
     key: 'obsidian',
     label: 'Obsidian Gold',
     labelKu: 'پۆڵای تاریک و زێڕین',
+    labelKmr: 'پۆلایێ تاری و زێڕین',
     description: 'Luxury obsidian black with 24K glowing gold highlights',
     isDark: true,
     darkBg: Color(0xFF0A0D10),
@@ -102,6 +114,7 @@ class AppPalettes {
     key: 'sunrise',
     label: 'Golden Dawn',
     labelKu: 'ڕۆژهەڵاتی زێڕین',
+    labelKmr: 'ڕۆژهەلاتێ زێڕین',
     description: 'Warm amber and soft cream for a luminous daylight feel',
     isDark: false,
     darkBg: Color(0xFFF3ECE0),
@@ -125,6 +138,7 @@ class AppPalettes {
     key: 'forest',
     label: 'Forest Calm',
     labelKu: 'دارستانی هێمن',
+    labelKmr: 'دارستانا ئارام',
     description: 'Fresh pine green tones and grounded earthy balance',
     isDark: true,
     darkBg: Color(0xFF081812),
@@ -148,6 +162,7 @@ class AppPalettes {
     key: 'dusk',
     label: 'Royal Violet Dusk',
     labelKu: 'بنەوشەیی شاهانە',
+    labelKmr: 'مۆرێ شاهانە',
     description: 'Velvet violet and lavender for a calm, premium mood',
     isDark: true,
     darkBg: Color(0xFF120C1D),
@@ -171,6 +186,7 @@ class AppPalettes {
     key: 'ocean',
     label: 'Midnight Sapphire',
     labelKu: 'یاقوتی شین',
+    labelKmr: 'یاقووتێ شین',
     description: 'Deep navy ocean blue with cyan and sapphire accents',
     isDark: true,
     darkBg: Color(0xFF07111D),
@@ -194,6 +210,7 @@ class AppPalettes {
     key: 'rose',
     label: 'Rose Gold Burgundy',
     labelKu: 'مەییی گوڵباخی شاهانە',
+    labelKmr: 'گوڵباخیێ شاهانە',
     description: 'Rich burgundy with elegant rose gold accents',
     isDark: true,
     darkBg: Color(0xFF180A12),
@@ -217,6 +234,7 @@ class AppPalettes {
     key: 'oled',
     label: 'Pure OLED Black',
     labelKu: 'ڕەشی ڕەقیک بۆ شەو',
+    labelKmr: 'ڕەشێ تەمام یێ شەڤێ',
     description: '100% pitch black for AMOLED battery saving with gold accent',
     isDark: true,
     darkBg: Color(0xFF000000),

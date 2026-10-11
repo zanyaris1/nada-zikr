@@ -1489,10 +1489,13 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
   void _showAyahActionMenu(QuranAyah ayah) {
     final loc = AppLocalizations.of(context);
     final lang = loc?.locale.languageCode ?? 'ku';
-    String localized(String kurdish, String arabic, String english) {
-      return lang == 'ku' ? kurdish : lang == 'ar' ? arabic : english;
+    String localized(String kurdish, String arabic, String english, [String? kurmanji]) {
+      if (lang == 'kmr') return kurmanji ?? kurdish;
+      if (lang == 'ku') return kurdish;
+      if (lang == 'ar') return arabic;
+      return english;
     }
-    final isRtl = lang == 'ku' || lang == 'ar';
+    final isRtl = lang == 'ku' || lang == 'kmr' || lang == 'ar';
 
     showModalBottomSheet(
       context: context,
@@ -1558,6 +1561,7 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                         'ئایەت ${ayah.ayah} · لاپەڕە ${ayah.page} · جوزء ${ayah.juz}',
                         'الآية ${ayah.ayah} · صفحة ${ayah.page} · الجزء ${ayah.juz}',
                         'Ayah ${ayah.ayah} · Page ${ayah.page} · Juz ${ayah.juz}',
+                        'ئایەت ${ayah.ayah} · بەرپەر ${ayah.page} · جزء ${ayah.juz}',
                       ),
                       style: AppTheme.englishText(
                           fontSize: 12, color: AppColors.faintText),
@@ -1572,9 +1576,9 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                     iconColor: AppColors.gold,
                     label: _bookmarkedAyahs.contains('${ayah.surah}:${ayah.ayah}')
                         ? localized('لابردنی پاشەکەوت', 'إلغاء حفظ هذه الآية',
-                          'Unsave This Ayah')
+                          'Unsave This Ayah', 'ڕاکرنا پاراستنێ')
                         : localized('پاشەکەوتکردنی ئەم ئایەتە', 'حفظ هذه الآية',
-                          'Save This Ayah'),
+                          'Save This Ayah', 'پاراستنا ڤێ ئایەتێ'),
                     labelStyle: isRtl
                         ? AppTheme.kurdishText(
                             fontSize: 14,
@@ -1596,9 +1600,9 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                         SnackBar(
                           content: Text(wasSaved
                                 ? localized('پاشەکەوتەکە لابرا', 'تم إلغاء حفظ الآية',
-                                  'Ayah unsaved')
+                                  'Ayah unsaved', 'پاراستن هاتە ڕاکرن')
                                 : localized('ئایەتەکە پاشەکەوت کرا', 'تم حفظ الآية',
-                                  'Ayah saved')),
+                                  'Ayah saved', 'ئایەت هاتە پاراستن')),
                           backgroundColor: AppColors.softSurface,
                           duration: const Duration(seconds: 2),
                         ),
@@ -1610,9 +1614,11 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                   _AyahActionButton(
                     icon: Icons.play_arrow_rounded,
                     iconColor: AppColors.gold,
-                    label: lang == 'ku'
-                        ? 'گوێگرتن'
-                        : (lang == 'ar' ? 'تشغيل' : 'Play'),
+                    label: lang == 'kmr'
+                        ? 'گوهداری'
+                        : (lang == 'ku'
+                            ? 'گوێگرتن'
+                            : (lang == 'ar' ? 'تشغيل' : 'Play')),
                     labelStyle: isRtl
                         ? AppTheme.kurdishText(
                             fontSize: 14,
@@ -1636,7 +1642,7 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                     icon: Icons.auto_stories_rounded,
                     iconColor: AppColors.accent1,
                     label: localized(
-                      'تەفسیری ئەم ئایەتە', 'تفسير هذه الآية', 'Open Tafsir'),
+                      'تەفسیری ئەم ئایەتە', 'تفسير هذه الآية', 'Open Tafsir', 'تەفسیرا ڤێ ئایەتێ'),
                     labelStyle: isRtl
                         ? AppTheme.kurdishText(
                             fontSize: 14,
@@ -1657,7 +1663,7 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                     icon: Icons.copy_rounded,
                     iconColor: AppColors.accent3,
                     label: localized(
-                      'کۆپیکردنی ئایەتەکە', 'نسخ نص الآية', 'Copy Ayah Text'),
+                      'کۆپیکردنی ئایەتەکە', 'نسخ نص الآية', 'Copy Ayah Text', 'کۆپیکرنا دەقێ ئایەتێ'),
                     labelStyle: isRtl
                         ? AppTheme.kurdishText(
                             fontSize: 14,
@@ -1674,7 +1680,7 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                         SnackBar(
                             content: Text(
                               localized('ئایەتەکە کۆپی کرا', 'تم نسخ الآية',
-                                'Ayah copied')),
+                                'Ayah copied', 'ئایەت هاتە کۆپیکرن')),
                           backgroundColor: AppColors.softSurface,
                           duration: const Duration(seconds: 1),
                         ),
@@ -1687,7 +1693,7 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                     icon: Icons.share_rounded,
                     iconColor: AppColors.gold,
                     label: localized(
-                      'بڵاوکردنەوەی ئەم ئایەتە', 'مشاركة هذه الآية', 'Share This Ayah'),
+                      'بڵاوکردنەوەی ئەم ئایەتە', 'مشاركة هذه الآية', 'Share This Ayah', 'پارڤەکرنا ڤێ ئایەتێ'),
                     labelStyle: isRtl
                         ? AppTheme.kurdishText(
                             fontSize: 14,
@@ -1703,14 +1709,14 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                       buffer.writeln('﴿ ${ayah.text} ﴾');
                       buffer.writeln();
                       final surahMeta = _getSurahMeta(ayah.surah) ?? widget.surah;
-                      final surahName = lang == 'ku'
+                      final surahName = (lang == 'ku' || lang == 'kmr')
                           ? surahMeta.kurdishName
                           : lang == 'ar'
                               ? surahMeta.arabicName
                               : surahMeta.englishName;
                       buffer.writeln(
-                        '$surahName - ${localized('ئایەت', 'الآية', 'Ayah')} ${ayah.ayah}');
-                      buffer.writeln(localized('نەدا', 'ندا', 'Nada Quran'));
+                        '$surahName - ${localized('ئایەت', 'الآية', 'Ayah', 'ئایەت')} ${ayah.ayah}');
+                      buffer.writeln(localized('نەدا', 'ندا', 'Nada Quran', 'نەدا'));
                       AppShareService.share(context, buffer.toString());
                     },
                   ),
@@ -1730,7 +1736,7 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
     final loc = AppLocalizations.of(context);
     final lang = loc?.locale.languageCode ?? 'ku';
     final surahMeta = _getSurahMeta(ayah.surah) ?? widget.surah;
-    final surahName = lang == 'ku'
+    final surahName = (lang == 'ku' || lang == 'kmr')
         ? surahMeta.kurdishName
         : lang == 'ar'
             ? surahMeta.arabicName

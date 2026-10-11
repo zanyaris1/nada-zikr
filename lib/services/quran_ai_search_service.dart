@@ -9,11 +9,13 @@ class QuranAiSearchResult {
   final int ayahNumber;
   final String surahArabicName;
   final String surahKurdishName;
+  final String? surahKurmanjiName;
   final String surahEnglishName;
   final String ayahArabicText;
   final int pageNumber;
   final int juzNumber;
   final String reasonKu;
+  final String? reasonKmr;
   final String reasonAr;
   final String reasonEn;
 
@@ -22,16 +24,19 @@ class QuranAiSearchResult {
     required this.ayahNumber,
     required this.surahArabicName,
     required this.surahKurdishName,
+    this.surahKurmanjiName,
     required this.surahEnglishName,
     required this.ayahArabicText,
     required this.pageNumber,
     required this.juzNumber,
     required this.reasonKu,
+    this.reasonKmr,
     required this.reasonAr,
     required this.reasonEn,
   });
 
   String getReason(String language) {
+    if (language == 'kmr' && reasonKmr != null && reasonKmr!.isNotEmpty) return reasonKmr!;
     if ((language == 'ku' || language == 'kmr') && reasonKu.isNotEmpty) return reasonKu;
     if (language == 'ar' && reasonAr.isNotEmpty) return reasonAr;
     if (reasonEn.isNotEmpty) return reasonEn;
@@ -256,11 +261,13 @@ JSON OUTPUT FORMAT:
           ayahNumber: ayahNum,
           surahArabicName: surahMeta.arabicName,
           surahKurdishName: surahMeta.kurdishName,
+          surahKurmanjiName: surahMeta.kurdishName,
           surahEnglishName: surahMeta.englishName,
           ayahArabicText: ayahObj.text,
           pageNumber: ayahObj.page,
           juzNumber: ayahObj.juz,
           reasonKu: item['reason_ku'] as String? ?? '',
+          reasonKmr: item['reason_kmr'] as String? ?? item['reason_ku'] as String?,
           reasonAr: item['reason_ar'] as String? ?? '',
           reasonEn: item['reason_en'] as String? ?? '',
         ),

@@ -138,7 +138,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                isKurdish ? 'هەڵبژاردنی ڕووکار • Choose Theme' : 'Choose Theme',
+                                _currentLang == 'kmr'
+                                    ? 'هەلبژارتنا ڕووکاری • Choose Theme'
+                                    : (isKurdish
+                                        ? 'هەڵبژاردنی ڕووکار • Choose Theme'
+                                        : (_currentLang == 'ar' ? 'اختيار المظهر • Choose Theme' : 'Choose Theme')),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: isKurdish
@@ -204,7 +208,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        isKurdish ? palette.labelKu : palette.label,
+                                        palette.getLocalizedLabel(_currentLang),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
@@ -330,9 +334,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    isKurdish
-                                        ? 'زمانی بەرنامە'
-                                        : (_currentLang == 'ar' ? 'لغة التطبيق' : 'App Language'),
+                                    _currentLang == 'kmr'
+                                        ? 'زمانێ بەرنامەی'
+                                        : (isKurdish
+                                            ? 'زمانی بەرنامە'
+                                            : (_currentLang == 'ar' ? 'لغة التطبيق' : 'App Language')),
                                     style: isKurdish
                                         ? AppTheme.kurdishTitle(fontSize: 15, color: AppColors.cream)
                                         : AppTheme.englishText(fontSize: 15, fontWeight: FontWeight.bold),
@@ -346,7 +352,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                               ),
                             ),
                             Icon(
-                              isKurdish
+                              isKurdish || _currentLang == 'ar'
                                   ? Icons.chevron_left_rounded
                                   : Icons.chevron_right_rounded,
                               color: AppColors.gold,
@@ -391,20 +397,30 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    isKurdish ? 'هەڵبژاردنی ڕووکار' : 'Choose Theme',
+                                    _currentLang == 'kmr'
+                                        ? 'هەلبژارتنا ڕووکاری'
+                                        : (isKurdish
+                                            ? 'هەڵبژاردنی ڕووکار'
+                                            : (_currentLang == 'ar' ? 'اختيار المظهر' : 'Choose Theme')),
                                     style: isKurdish
                                         ? AppTheme.kurdishTitle(fontSize: 15, color: AppColors.cream)
                                         : AppTheme.englishText(fontSize: 15, fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    '${isKurdish ? currentPalette.labelKu : currentPalette.label} · (8 ${isKurdish ? 'ڕووکار' : 'Themes'})',
+                                    '${currentPalette.getLocalizedLabel(_currentLang)} · (8 ${_currentLang == 'kmr' ? 'ڕووکار' : (isKurdish ? 'ڕووکار' : (_currentLang == 'ar' ? 'مظاهر' : 'Themes'))})',
                                     style: AppTheme.englishText(fontSize: 12, color: AppColors.gold),
                                   ),
                                 ],
                               ),
                             ),
-                            Icon(Icons.chevron_right_rounded, color: AppColors.gold, size: 22),
+                            Icon(
+                              isKurdish || _currentLang == 'ar'
+                                  ? Icons.chevron_left_rounded
+                                  : Icons.chevron_right_rounded,
+                              color: AppColors.gold,
+                              size: 22,
+                            ),
                           ],
                         ),
                       ),
@@ -416,11 +432,13 @@ class _SettingsScreenState extends State<SettingsScreen>
 
                     // Prayer Times & Azan Settings Card
                     Text(
-                      isKurdish
-                          ? 'مواقیت و بانگدان'
-                          : (_currentLang == 'ar'
-                              ? 'مواقيت الصلاة والأذان'
-                              : 'Prayer Times & Azan'),
+                      _currentLang == 'kmr'
+                          ? 'دەمێن نڤێژێ و بانگدان'
+                          : (isKurdish
+                              ? 'مواقیت و بانگدان'
+                              : (_currentLang == 'ar'
+                                  ? 'مواقيت الصلاة والأذان'
+                                  : 'Prayer Times & Azan')),
                       style: isKurdish
                           ? AppTheme.kurdishTitle(
                               fontSize: 14, color: AppColors.gold)
@@ -435,13 +453,15 @@ class _SettingsScreenState extends State<SettingsScreen>
 
                     // Preferences & Toggles Section
                     Text(
-                      isKurdish ? 'تایبەتمەندییەکان' : 'Preferences',
+                      _currentLang == 'kmr'
+                          ? 'تایبەتمەندی'
+                          : (isKurdish ? 'تایبەتمەندییەکان' : (_currentLang == 'ar' ? 'التفضيلات' : 'Preferences')),
                       style: isKurdish ? AppTheme.kurdishTitle(fontSize: 14, color: AppColors.gold) : AppTheme.labelText(color: AppColors.mutedText),
                     ),
                     const SizedBox(height: 10),
                     _buildSettingToggle(
-                      loc?.translate('enableReminders') ?? 'ئاگادارکردنەوەی ڕۆژانە',
-                      loc?.translate('reminderTime') ?? 'کاتی بەیانیان و ئێواران',
+                      loc?.translate('enableReminders') ?? (_currentLang == 'kmr' ? 'چالاککرنا ئاگەهدارییان' : 'ئاگادارکردنەوەی ڕۆژانە'),
+                      loc?.translate('reminderTime') ?? (_currentLang == 'kmr' ? 'دەما سپێدە و ئێڤاران' : 'کاتی بەیانیان و ئێواران'),
                       _notifications,
                       (value) async {
                         setState(() => _notifications = value);
@@ -452,8 +472,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                     const SizedBox(height: 10),
                     _buildSettingToggle(
-                      loc?.translate('haptic') ?? 'لەرزینی هەستپێکردن',
-                      isKurdish ? 'لەرزین لەکاتی کرتەکردندا' : 'Vibrate on count tap',
+                      loc?.translate('haptic') ?? (_currentLang == 'kmr' ? 'لەرزین (هەستپێکرن)' : 'لەرزینی هەستپێکردن'),
+                      _currentLang == 'kmr' ? 'لەرزین دەمێ دەستدانێ' : (isKurdish ? 'لەرزین لەکاتی کرتەکردندا' : (_currentLang == 'ar' ? 'الاهتزاز عند الضغط' : 'Vibrate on count tap')),
                       _haptic,
                       (value) async {
                         setState(() => _haptic = value);
@@ -469,9 +489,11 @@ class _SettingsScreenState extends State<SettingsScreen>
 
                     // About App Interactive Section
                     Text(
-                      isKurdish
-                          ? 'دەربارەی بەرنامە'
-                          : (_currentLang == 'ar' ? 'عن التطبيق' : 'About App'),
+                      _currentLang == 'kmr'
+                          ? 'دەربارەی بەرنامەی'
+                          : (isKurdish
+                              ? 'دەربارەی بەرنامە'
+                              : (_currentLang == 'ar' ? 'عن التطبيق' : 'About App')),
                       style: isKurdish
                           ? AppTheme.kurdishTitle(
                               fontSize: 14, color: AppColors.gold)
@@ -512,11 +534,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    isKurdish
-                                        ? 'دەربارەی ئەپی نەدا (Nada)'
-                                        : (_currentLang == 'ar'
-                                            ? 'عن تطبيق نَدَى'
-                                            : 'About Nada App'),
+                                    _currentLang == 'kmr'
+                                        ? 'دەربارەی بەرنامەیێ نەدا (Nada)'
+                                        : (isKurdish
+                                            ? 'دەربارەی ئەپی نەدا (Nada)'
+                                            : (_currentLang == 'ar'
+                                                ? 'عن تطبيق نَدَى'
+                                                : 'About Nada App')),
                                     style: isKurdish
                                         ? AppTheme.kurdishTitle(
                                             fontSize: 15,
@@ -527,11 +551,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    isKurdish
-                                        ? 'یادی خودا'
-                                        : (_currentLang == 'ar'
-                                            ? 'الذكر، الرسالة والمطور'
-                                            : 'Mission, Dhikr & Creator'),
+                                    _currentLang == 'kmr'
+                                        ? 'یادی خودێ'
+                                        : (isKurdish
+                                            ? 'یادی خودا'
+                                            : (_currentLang == 'ar'
+                                                ? 'الذكر، الرسالة والمطور'
+                                                : 'Mission, Dhikr & Creator')),
                                     style: isKurdish
                                         ? AppTheme.kurdishText(
                                             fontSize: 11,
@@ -544,7 +570,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                               ),
                             ),
                             Icon(
-                              isKurdish
+                              isKurdish || _currentLang == 'ar'
                                   ? Icons.arrow_back_ios_new_rounded
                                   : Icons.arrow_forward_ios_rounded,
                               color: AppColors.gold,
@@ -591,11 +617,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    isKurdish
-                                        ? 'ناردنی سەرنج و پێشنیار'
-                                        : (_currentLang == 'ar'
-                                            ? 'إرسال الملاحظات والاقتراحات'
-                                            : 'Send Feedback & Suggestions'),
+                                    _currentLang == 'kmr'
+                                        ? 'هنارتنا تێبینی و پێشنیاران'
+                                        : (isKurdish
+                                            ? 'ناردنی سەرنج و پێشنیار'
+                                            : (_currentLang == 'ar'
+                                                ? 'إرسال الملاحظات والاقتراحات'
+                                                : 'Send Feedback & Suggestions')),
                                     style: isKurdish
                                         ? AppTheme.kurdishTitle(
                                             fontSize: 15,
@@ -606,11 +634,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    isKurdish
-                                        ? 'پەیامەکەت ڕاستەوخۆ بۆ گەشەپێدەر دەچێت'
-                                        : (_currentLang == 'ar'
-                                            ? 'رسالتك تصل مباشرة إلى المطور'
-                                            : 'Your message goes directly to the developer'),
+                                    _currentLang == 'kmr'
+                                        ? 'پەیاما تە ئێکسەر بۆ گەشەپێدەری دچیت'
+                                        : (isKurdish
+                                            ? 'پەیامەکەت ڕاستەوخۆ بۆ گەشەپێدەر دەچێت'
+                                            : (_currentLang == 'ar'
+                                                ? 'رسالتك تصل مباشرة إلى المطور'
+                                                : 'Your message goes directly to the developer')),
                                     style: isKurdish
                                         ? AppTheme.kurdishText(
                                             fontSize: 11,
@@ -623,7 +653,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                               ),
                             ),
                             Icon(
-                              isKurdish
+                              isKurdish || _currentLang == 'ar'
                                   ? Icons.arrow_back_ios_new_rounded
                                   : Icons.arrow_forward_ios_rounded,
                               color: AppColors.gold,
@@ -678,7 +708,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   fontSize: 20, color: AppColors.gold)),
                           const SizedBox(height: 4),
                           Text(
-                            loc?.translate('appTagline') ?? 'قورئان و یادی خوا',
+                            loc?.translate('appTagline') ?? (_currentLang == 'kmr' ? 'بۆ قورئان و دوعا و یادی خودێ' : 'قورئان و یادی خوا'),
                             style: isKurdish
                                 ? AppTheme.kurdishText(
                                     fontSize: 13,
@@ -765,21 +795,27 @@ class _SettingsScreenState extends State<SettingsScreen>
     final tzAbbr = city.timezoneAbbreviation();
     final isOfficial = city.isKurdistanOfficial;
 
-    final locationTitle = isKurdish
-        ? 'شوێن و شاری بانگدان'
-        : (currentLang == 'ar' ? 'موقع المدينة للصلاة' : 'Prayer Location & City');
+    final locationTitle = currentLang == 'kmr'
+        ? 'جهـ و باژێڕێ دەمێن نڤێژێ'
+        : (isKurdish
+            ? 'شوێن و شاری بانگدان'
+            : (currentLang == 'ar' ? 'موقع المدينة للصلاة' : 'Prayer Location & City'));
 
     final statusSubtitle = isOfficial
-        ? (isKurdish
-            ? '$cityName ($tzAbbr) · خشتەی فەرمی ئەوقاف'
-            : (currentLang == 'ar'
-                ? '$cityName ($tzAbbr) · الجدول الرسمي للأوقاف'
-                : '$cityName ($tzAbbr) · Official Awqaf'))
-        : (isKurdish
-            ? '$cityName ($tzAbbr) · حیسابکاری فەلەکی GPS'
-            : (currentLang == 'ar'
-                ? '$cityName ($tzAbbr) · حساب فلكي دقيق'
-                : '$cityName ($tzAbbr) · Astronomical Math'));
+        ? (currentLang == 'kmr'
+            ? '$cityName ($tzAbbr) · خشتەیێ فەرمی یێ ئەوقافێ'
+            : (isKurdish
+                ? '$cityName ($tzAbbr) · خشتەی فەرمی ئەوقاف'
+                : (currentLang == 'ar'
+                    ? '$cityName ($tzAbbr) · الجدول الرسمي للأوقاف'
+                    : '$cityName ($tzAbbr) · Official Awqaf')))
+        : (currentLang == 'kmr'
+            ? '$cityName ($tzAbbr) · حیسابکرنا فەلەکی GPS'
+            : (isKurdish
+                ? '$cityName ($tzAbbr) · حیسابکاری فەلەکی GPS'
+                : (currentLang == 'ar'
+                    ? '$cityName ($tzAbbr) · حساب فلكي دقيق'
+                    : '$cityName ($tzAbbr) · Astronomical Math')));
 
     return GestureDetector(
       onTap: () {
@@ -819,7 +855,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     locationTitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: currentLang == 'ku'
+                    style: (currentLang == 'ku' || currentLang == 'kmr')
                         ? AppTheme.kurdishTitle(fontSize: 15, color: AppColors.cream)
                         : AppTheme.englishText(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
@@ -834,7 +870,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
             Icon(
-              currentLang == 'ku'
+              (currentLang == 'ku' || currentLang == 'kmr' || currentLang == 'ar')
                   ? Icons.chevron_left_rounded
                   : Icons.chevron_right_rounded,
               color: AppColors.gold,
@@ -849,9 +885,11 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildPrayerSettingsCard(bool isKurdish, String currentLang) {
     final methodId = StorageService.getPrayerMethod();
     final method = CalculationMethod.byId(methodId);
-    final methodName = currentLang == 'ku'
+    final methodName = currentLang == 'kmr'
         ? method.nameKu
-        : (currentLang == 'ar' ? method.nameAr : method.nameEn);
+        : (currentLang == 'ku'
+            ? method.nameKu
+            : (currentLang == 'ar' ? method.nameAr : method.nameEn));
     final preMins = StorageService.getPreAzanReminderMinutes();
     final hijriOffset = StorageService.getPrayerHijriOffset();
     final cityId = StorageService.getPrayerSelectedCity();
@@ -860,22 +898,30 @@ class _SettingsScreenState extends State<SettingsScreen>
     final tzAbbr = city.timezoneAbbreviation();
 
     final preAzanSummary = preMins == 0
-        ? (currentLang == 'ku'
-            ? 'ئاگاداری ڕاستەوخۆ'
-            : (currentLang == 'ar' ? 'تنبيه مباشر' : 'At exact time'))
-        : (currentLang == 'ku'
-            ? '$preMins خولەک پێش بانگ'
-            : (currentLang == 'ar' ? 'قبل $preMins د' : '$preMins min before'));
+        ? (currentLang == 'kmr'
+            ? 'ئاگەهدارییا دەستبەجهـ'
+            : (currentLang == 'ku'
+                ? 'ئاگاداری ڕاستەوخۆ'
+                : (currentLang == 'ar' ? 'تنبيه مباشر' : 'At exact time')))
+        : (currentLang == 'kmr'
+            ? '$preMins خولەک بەری بانگی'
+            : (currentLang == 'ku'
+                ? '$preMins خولەک پێش بانگ'
+                : (currentLang == 'ar' ? 'قبل $preMins د' : '$preMins min before')));
 
     final hijriSummary = hijriOffset == 0
-        ? (currentLang == 'ku'
+        ? (currentLang == 'kmr'
             ? 'کۆچی: بنەڕەت'
-            : (currentLang == 'ar' ? 'هجري: قياسي' : 'Hijri: 0d'))
-        : (currentLang == 'ku'
+            : (currentLang == 'ku'
+                ? 'کۆچی: بنەڕەت'
+                : (currentLang == 'ar' ? 'هجري: قياسي' : 'Hijri: 0d')))
+        : (currentLang == 'kmr'
             ? 'کۆچی: ${hijriOffset > 0 ? "+$hijriOffset" : hijriOffset} ڕۆژ'
-            : (currentLang == 'ar'
-                ? 'هجري: ${hijriOffset > 0 ? "+$hijriOffset" : hijriOffset} يوم'
-                : 'Hijri: ${hijriOffset > 0 ? "+$hijriOffset" : hijriOffset}d'));
+            : (currentLang == 'ku'
+                ? 'کۆچی: ${hijriOffset > 0 ? "+$hijriOffset" : hijriOffset} ڕۆژ'
+                : (currentLang == 'ar'
+                    ? 'هجري: ${hijriOffset > 0 ? "+$hijriOffset" : hijriOffset} يوم'
+                    : 'Hijri: ${hijriOffset > 0 ? "+$hijriOffset" : hijriOffset}d')));
 
     return GestureDetector(
       onTap: () {
@@ -911,14 +957,16 @@ class _SettingsScreenState extends State<SettingsScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    currentLang == 'ku'
-                        ? 'ڕێکخستنەکانی کاتی بانگ و ئاگادارکردنەوە'
-                        : (currentLang == 'ar'
-                            ? 'إعدادات مواقيت الصلاة والأذان'
-                            : 'Prayer Times & Azan Settings'),
+                    currentLang == 'kmr'
+                        ? 'ڕێکخستنێن دەمێن نڤێژێ و ئاگەهدارییان'
+                        : (currentLang == 'ku'
+                            ? 'ڕێکخستنەکانی کاتی بانگ و ئاگادارکردنەوە'
+                            : (currentLang == 'ar'
+                                ? 'إعدادات مواقيت الصلاة والأذان'
+                                : 'Prayer Times & Azan Settings')),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: currentLang == 'ku'
+                    style: (currentLang == 'ku' || currentLang == 'kmr')
                         ? AppTheme.kurdishTitle(fontSize: 15, color: AppColors.cream)
                         : AppTheme.englishText(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
@@ -933,7 +981,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
             Icon(
-              currentLang == 'ku'
+              (currentLang == 'ku' || currentLang == 'kmr' || currentLang == 'ar')
                   ? Icons.chevron_left_rounded
                   : Icons.chevron_right_rounded,
               color: AppColors.gold,
@@ -1045,19 +1093,23 @@ class _SettingsScreenState extends State<SettingsScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isKurdish
-                              ? 'هەڵبژاردنی زمانی بەرنامە'
-                              : (_currentLang == 'ar' ? 'اختيار لغة التطبيق' : 'Select App Language'),
+                          _currentLang == 'kmr'
+                              ? 'هەلبژارتنا زمانێ بەرنامەی'
+                              : (isKurdish
+                                  ? 'هەڵبژاردنی زمانی بەرنامە'
+                                  : (_currentLang == 'ar' ? 'اختيار لغة التطبيق' : 'Select App Language')),
                           style: isKurdish
                               ? AppTheme.kurdishTitle(fontSize: 18, color: AppColors.cream)
                               : AppTheme.englishText(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          isKurdish
-                              ? 'تەواوی نوسین و بەشەکان دەگۆڕدرێن'
-                              : (_currentLang == 'ar'
-                                  ? 'سيتم تغيير لغة الواجهة بالكامل'
-                                  : 'The entire UI will update immediately'),
+                          _currentLang == 'kmr'
+                              ? 'هەمی نڤیسین و پشک دێ هێنە گوهۆڕین'
+                              : (isKurdish
+                                  ? 'تەواوی نوسین و بەشەکان دەگۆڕدرێن'
+                                  : (_currentLang == 'ar'
+                                      ? 'سيتم تغيير لغة الواجهة بالكامل'
+                                      : 'The entire UI will update immediately')),
                           style: AppTheme.englishText(fontSize: 12, color: AppColors.mutedText),
                         ),
                       ],
@@ -1278,9 +1330,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              isKurdish
-                                  ? 'دەربارەی ئەپی نەدا'
-                                  : (lang == 'ar' ? 'عن تطبيق نَدَى' : 'About Nada App'),
+                              lang == 'kmr'
+                                  ? 'دەربارەی بەرنامەیێ نەدا'
+                                  : (isKurdish
+                                      ? 'دەربارەی ئەپی نەدا'
+                                      : (lang == 'ar' ? 'عن تطبيق نَدَى' : 'About Nada App')),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: isKurdish
@@ -1322,11 +1376,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        isKurdish
-                            ? 'نەدا: قورئان و یادی خوا'
-                            : (lang == 'ar'
-                                ? 'ندا: القرآن وذكر الله'
-                                : 'Nada: Quran & Dhikr'),
+                        lang == 'kmr'
+                            ? 'نەدا: قورئان و یادی خودێ'
+                            : (isKurdish
+                                ? 'نەدا: قورئان و یادی خوا'
+                                : (lang == 'ar'
+                                    ? 'ندا: القرآن وذكر الله'
+                                    : 'Nada: Quran & Dhikr')),
                         textAlign: TextAlign.center,
                         style: isKurdish
                             ? AppTheme.kurdishTitle(
@@ -1337,11 +1393,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 color: AppColors.gold),
                       ),
                       Text(
-                        isKurdish
-                            ? 'وەشانی 1.0.0 (نوێترین)'
-                            : (lang == 'ar'
-                                ? 'الإصدار 1.0.0'
-                                : 'Version 1.0.0 (Latest)'),
+                        lang == 'kmr'
+                            ? 'وەشان 1.0.0 (نووترین)'
+                            : (isKurdish
+                                ? 'وەشانی 1.0.0 (نوێترین)'
+                                : (lang == 'ar'
+                                    ? 'الإصدار 1.0.0'
+                                    : 'Version 1.0.0 (Latest)')),
                         style: isKurdish
                             ? AppTheme.kurdishText(
                                 fontSize: 11, color: AppColors.faintText)
@@ -1378,11 +1436,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        isKurdish
-                            ? '«بێگومان تەنها بە یادی خوای گەورە دڵەکان ئارام دەگرن»'
-                            : (lang == 'ar'
-                                ? 'سورة الرعد - آية 28'
-                                : '“Unquestionably, by the remembrance of Allah hearts are assured.” (13:28)'),
+                        lang == 'kmr'
+                            ? '«بێگومان بتنێ ب یادی خودایێ مەزن دل ئارام دبن»'
+                            : (isKurdish
+                                ? '«بێگومان تەنها بە یادی خوای گەورە دڵەکان ئارام دەگرن»'
+                                : (lang == 'ar'
+                                    ? 'سورة الرعد - آية 28'
+                                    : '“Unquestionably, by the remembrance of Allah hearts are assured.” (13:28)')),
                         textAlign: TextAlign.center,
                         style: isKurdish
                             ? AppTheme.kurdishText(
@@ -1397,20 +1457,25 @@ class _SettingsScreenState extends State<SettingsScreen>
 
                 // Narrative Message
                 Text(
-                  isKurdish
-                      ? 'یادی خودای پەروەردگار و زیکر و پاڕانەوە چرای ڕێگای ژیانمانە و هەوێنی ئارامی و بەختەوەرییە لە دونیا و قیامەتدا. ئەپی «نەدا» هاتە کایەوە تا ببێتە یاوەر و هاوڕێیەکی دڵسۆز و ڕۆحی بۆ هەموو موسڵمانێک.\n\n'
-                          'هەمیشە هەستم بە کەلێنێکی گەورە کردووە کە بە زمانی شیرینی کوردی ئەپێکی ئیسلامی تەواو سەردەمیانە بەردەست بێت ، ئەپێک کە بە بەرزترین ئاست زۆرترین زیکر و فەرموودەی سەروەرمان وە دوعا و قورئانی پیرۆز و تەفسیر و دەنگی قورئانخوێن و کاتە فەرمییەکانی بانگی شارەکانی کوردستان و جیهان لەخۆ بگرێت.\n\n'
-                          '«نەدا» هات تا شایستەترین و پاکترین خزمەت پێشکەش بە ئیمانداران و گەلەکەمان بکات.\n\n'
-                          'پشتیوان بە خوا لە داهاتوو باشتریش پێشکەش دەکات.'
-                      : (lang == 'ar'
-                          ? 'ذكر الله تعالى والأدعية المباركة هما نور دروبنا ومنبع الطمأنينة والسعادة في الدنيا والآخرة. انطلق تطبيق «نَدَى» ليكون رفيقاً مخلصاً وروحانياً لكل مسلم في كل لحظة.\n\n'
-                              'لطالما كان هناك تطلع وشعور بالحاجة لوجود تطبيق إسلامي شامل وعصري باللغة الكردية؛ تطبيق يجمع بأعلى درجات الإتقان أوسع أبواب الأذكار النبوية، والقرآن الكريم بتفاسيره وتلاوات كبار القراء، مع مواقيت الصلاة الدقيقة لكردستان والعالم.\n\n'
-                              'جاء «نَدَى» ليقدم أصدق وأنقى خدمة للمؤمنين ومجتمعنا المبارك.\n\n'
-                              'وبإذن الله وتوفيقه، سنقدم الأفضل دائماً في المستقبل.'
-                          : 'The remembrance of Allah and sacred supplications are the guiding light of our journey and the true fountain of peace in this life and the hereafter. Nada was created to be a devoted spiritual companion for every Muslim.\n\n'
-                              'There has always been a profound aspiration for a comprehensive, modern, and beautiful Islamic app in Kurdish—one crafted to the highest standard to encompass authentic Adhkar, the Holy Quran with Kurdish Tafsir, recitations by  master Qaris, and accurate prayer times for Kurdistan and the world.\n\n'
-                              'Nada came to deliver the purest, most elevated service to believers and our community.\n\n'
-                              'With Allah’s grace, even greater enhancements will follow in the future.'),
+                  lang == 'kmr'
+                      ? 'یادی خودایێ پەروەردگار و زکر و دوعا چرایا ڕێکا ژیانا مەیە و کانییا ئارامی و بەختەوەریێیە د دونیا و ئاخیرەتێدا. بەرنامەیێ «نەدا» هاتە بەرهەڤکرن دا کو ببیتە هەڤالەکێ دلسۆز و گیانی بۆ هەر موسلمانەکی.\n\n'
+                          'هەمیشە من هەست ب پێدڤییەکا مەزن دکر کو ب زمانێ شرینێ کوردی بەرنامەیەکێ ئیسلامی یێ سەردەمیانە هەبیت، بەرنامەیەک کو ب بلیندترین ئاست زێدەترین زکر و فەرموودەیێن پێغەمبەری، دوعا، قورئانا پیرۆز دگەل تەفسیرێ، دەنگێ قورئانخوینان و دەمێن فەرمی یێن نڤێژێ یێن باژێرێن کوردستانێ و جیهانێ بگریتە خۆ.\n\n'
+                          '«نەدا» هات دا خزمەتەکا ژ دل و پاقژ پێشکێشی ئیمانداران و گەلێ مە بکەت.\n\n'
+                          'ب پشتەڤانییا خودێ د پاشەڕۆژێدا دێ باشتر ژی پێشکێش کەین.'
+                      : (isKurdish
+                          ? 'یادی خودای پەروەردگار و زیکر و پاڕانەوە چرای ڕێگای ژیانمانە و هەوێنی ئارامی و بەختەوەرییە لە دونیا و قیامەتدا. ئەپی «نەدا» هاتە کایەوە تا ببێتە یاوەر و هاوڕێیەکی دڵسۆز و ڕۆحی بۆ هەموو موسڵمانێک.\n\n'
+                              'هەمیشە هەستم بە کەلێنێکی گەورە کردووە کە بە زمانی شیرینی کوردی ئەپێکی ئیسلامی تەواو سەردەمیانە بەردەست بێت ، ئەپێک کە بە بەرزترین ئاست زۆرترین زیکر و فەرموودەی سەروەرمان وە دوعا و قورئانی پیرۆز و تەفسیر و دەنگی قورئانخوێن و کاتە فەرمییەکانی بانگی شارەکانی کوردستان و جیهان لەخۆ بگرێت.\n\n'
+                              '«نەدا» هات تا شایستەترین و پاکترین خزمەت پێشکەش بە ئیمانداران و گەلەکەمان بکات.\n\n'
+                              'پشتیوان بە خوا لە داهاتوو باشتریش پێشکەش دەکات.'
+                          : (lang == 'ar'
+                              ? 'ذكر الله تعالى والأدعية المباركة هما نور دروبنا ومنبع الطمأنينة والسعادة في الدنيا والآخرة. انطلق تطبيق «نَدَى» ليكون رفيقاً مخلصاً وروحانياً لكل مسلم في كل لحظة.\n\n'
+                                  'لطالما كان هناك تطلع وشعور بالحاجة لوجود تطبيق إسلامي شامل وعصري باللغة الكردية؛ تطبيق يجمع بأعلى درجات الإتقان أوسع أبواب الأذكار النبوية، والقرآن الكريم بتفاسيره وتلاوات كبار القراء، مع مواقيت الصلاة الدقيقة لكردستان والعالم.\n\n'
+                                  'جاء «نَدَى» ليقدم أصدق وأنقى خدمة للمؤمنين ومجتمعنا المبارك.\n\n'
+                                  'وبإذن الله وتوفيقه، سنقدم الأفضل دائماً في المستقبل.'
+                              : 'The remembrance of Allah and sacred supplications are the guiding light of our journey and the true fountain of peace in this life and the hereafter. Nada was created to be a devoted spiritual companion for every Muslim.\n\n'
+                                  'There has always been a profound aspiration for a comprehensive, modern, and beautiful Islamic app in Kurdish—one crafted to the highest standard to encompass authentic Adhkar, the Holy Quran with Kurdish Tafsir, recitations by  master Qaris, and accurate prayer times for Kurdistan and the world.\n\n'
+                                  'Nada came to deliver the purest, most elevated service to believers and our community.\n\n'
+                                  'With Allah’s grace, even greater enhancements will follow in the future.')),
                   textAlign: isKurdish || lang == 'ar'
                       ? TextAlign.justify
                       : TextAlign.left,
@@ -1450,11 +1515,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                               color: AppColors.gold, size: 18),
                           const SizedBox(width: 8),
                           Text(
-                            isKurdish
+                            lang == 'kmr'
                                 ? 'گەشەپێدەر و دروستکەر:'
-                                : (lang == 'ar'
-                                    ? 'تطوير وإعداد:'
-                                    : 'Crafted & Developed by:'),
+                                : (isKurdish
+                                    ? 'گەشەپێدەر و دروستکەر:'
+                                    : (lang == 'ar'
+                                        ? 'تطوير وإعداد:'
+                                        : 'Crafted & Developed by:')),
                             style: isKurdish
                                 ? AppTheme.kurdishText(
                                     fontSize: 12,
@@ -1495,11 +1562,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ],
                       const SizedBox(height: 8),
                       Text(
-                        isKurdish
-                            ? '«داواکارین لە پەروەردگار بیکاتە توێشووی خێر و قبووڵی بکات»'
-                            : (lang == 'ar'
-                                ? '«نسأل الله أن يتقبل هذا العمل وينفع به الجميع»'
-                                : '“May Allah accept this humble endeavor and make it a blessing for all.”'),
+                        lang == 'kmr'
+                            ? '«داخوازێ ژ پەروەردگاری دکەین بکەتە خێر و قەبوول بکەت»'
+                            : (isKurdish
+                                ? '«داواکارین لە پەروەردگار بیکاتە توێشووی خێر و قبووڵی بکات»'
+                                : (lang == 'ar'
+                                    ? '«نسأل الله أن يتقبل هذا العمل وينفع به الجميع»'
+                                    : '“May Allah accept this humble endeavor and make it a blessing for all.”')),
                         textAlign: TextAlign.center,
                         style: isKurdish
                             ? AppTheme.kurdishText(
@@ -1526,9 +1595,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                   onPressed: () => Navigator.pop(ctx),
                   child: Text(
-                    isKurdish
-                        ? 'داخستن'
-                        : (lang == 'ar' ? 'إغلاق' : 'Close'),
+                    lang == 'kmr'
+                        ? 'گرتن'
+                        : (isKurdish
+                            ? 'داخستن'
+                            : (lang == 'ar' ? 'إغلاق' : 'Close')),
                     style: isKurdish
                         ? AppTheme.kurdishTitle(
                             fontSize: 14, color: AppColors.darkBg)
@@ -1564,35 +1635,45 @@ class _SettingsScreenState extends State<SettingsScreen>
         File(profile.profilePicturePath!).existsSync();
     final displayName = hasCustomName
         ? profile.name.trim()
-        : (isKurdish
-            ? 'ئیمانداری خۆشەویست'
-            : (lang == 'ar' ? 'أهلاً بك، يا مؤمن' : 'Beloved Believer'));
+        : (lang == 'kmr'
+            ? 'ئیماندارێ خۆشتڤی'
+            : (isKurdish
+                ? 'ئیمانداری خۆشەویست'
+                : (lang == 'ar' ? 'أهلاً بك، يا مؤمن' : 'Beloved Believer')));
 
     String honorificTitle;
     IconData honorificIcon;
     Color honorificColor;
     if (profile.currentStreak >= 30) {
-      honorificTitle = isKurdish
-          ? 'پێشەنگی زیکر'
-          : (lang == 'ar' ? 'سابق بالخيرات' : 'Dhikr Champion');
+      honorificTitle = lang == 'kmr'
+          ? 'پێشەنگێ زکری'
+          : (isKurdish
+              ? 'پێشەنگی زیکر'
+              : (lang == 'ar' ? 'سابق بالخيرات' : 'Dhikr Champion'));
       honorificIcon = Icons.military_tech_rounded;
       honorificColor = const Color(0xFFFFD700);
     } else if (profile.currentStreak >= 7) {
-      honorificTitle = isKurdish
-          ? 'دۆستی زیکر'
-          : (lang == 'ar' ? 'مواظب على الذكر' : 'Devoted to Dhikr');
+      honorificTitle = lang == 'kmr'
+          ? 'دۆستێ زکری'
+          : (isKurdish
+              ? 'دۆستی زیکر'
+              : (lang == 'ar' ? 'مواظب على الذكر' : 'Devoted to Dhikr'));
       honorificIcon = Icons.verified_rounded;
       honorificColor = const Color(0xFF64FFDA);
     } else if (profile.currentStreak >= 1) {
-      honorificTitle = isKurdish
-          ? 'ڕێبواری خێر'
-          : (lang == 'ar' ? 'سالك طريق النور' : 'Seeker of Light');
+      honorificTitle = lang == 'kmr'
+          ? 'ڕێبوارێ خێرێ'
+          : (isKurdish
+              ? 'ڕێبواری خێر'
+              : (lang == 'ar' ? 'سالك طريق النور' : 'Seeker of Light'));
       honorificIcon = Icons.auto_awesome_rounded;
       honorificColor = AppColors.gold;
     } else {
-      honorificTitle = isKurdish
-          ? 'دەستپێکی پیرۆز'
-          : (lang == 'ar' ? 'بداية مباركة' : 'Blessed Start');
+      honorificTitle = lang == 'kmr'
+          ? 'دەستپێکا پیرۆز'
+          : (isKurdish
+              ? 'دەستپێکی پیرۆز'
+              : (lang == 'ar' ? 'بداية مباركة' : 'Blessed Start'));
       honorificIcon = Icons.spa_rounded;
       honorificColor = AppColors.gold.withValues(alpha: 0.85);
     }
@@ -1632,11 +1713,13 @@ class _SettingsScreenState extends State<SettingsScreen>
             Row(
               children: [
                 Tooltip(
-                  message: isKurdish
-                      ? 'گۆڕینی وێنەی پرۆفایل'
-                      : (lang == 'ar'
-                          ? 'تعديل الصورة الشخصية'
-                          : 'Change Profile Photo'),
+                  message: lang == 'kmr'
+                      ? 'گوهۆڕینا وێنەیێ پرۆفایلی'
+                      : (isKurdish
+                          ? 'گۆڕینی وێنەی پرۆفایل'
+                          : (lang == 'ar'
+                              ? 'تعديل الصورة الشخصية'
+                              : 'Change Profile Photo')),
                   child: GestureDetector(
                     onTap: () => _showProfilePictureSheet(
                         context, profile, isKurdish, lang),
@@ -1773,9 +1856,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                           ),
                           const SizedBox(width: 6),
                           Tooltip(
-                            message: isKurdish
-                                ? 'گۆڕینی ناو'
-                                : (lang == 'ar' ? 'تعديل الاسم' : 'Edit Name'),
+                            message: lang == 'kmr'
+                                ? 'گوهۆڕینا ناڤی'
+                                : (isKurdish
+                                    ? 'گۆڕینی ناو'
+                                    : (lang == 'ar' ? 'تعديل الاسم' : 'Edit Name')),
                             child: GestureDetector(
                               onTap: () => _showEditNameDialog(
                                   context, profile, isKurdish, lang),
@@ -1855,7 +1940,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
-                                '${profile.currentStreak} ${isKurdish ? 'ڕۆژ بەردەوامی' : (lang == 'ar' ? 'أيام مواظبة' : 'Days Streak')}',
+                                '${profile.currentStreak} ${lang == 'kmr' ? 'ڕۆژێن بەردەوامیێ' : (isKurdish ? 'ڕۆژ بەردەوامی' : (lang == 'ar' ? 'أيام مواظبة' : 'Days Streak'))}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: isKurdish
@@ -1893,7 +1978,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
-                                '${profile.totalSessions} ${isKurdish ? 'تەسبیحات' : (lang == 'ar' ? 'جلسات الذكر' : 'Sessions')}',
+                                '${profile.totalSessions} ${lang == 'kmr' ? 'تەسبیحات' : (isKurdish ? 'تەسبیحات' : (lang == 'ar' ? 'جلسات الذكر' : 'Sessions'))}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: isKurdish
@@ -1986,12 +2071,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isKurdish
-                                  ? 'وێنەی پرۆفایل'
-                                  : (lang == 'ar'
-                                      ? 'الصورة الشخصية'
-                                      : 'Profile Photo'),
-                              style: isKurdish
+                              lang == 'kmr'
+                                  ? 'وێنەیێ پرۆفایلی'
+                                  : (isKurdish
+                                      ? 'وێنەی پرۆفایل'
+                                      : (lang == 'ar'
+                                          ? 'الصورة الشخصية'
+                                          : 'Profile Photo')),
+                              style: isKurdish || lang == 'kmr'
                                   ? AppTheme.kurdishTitle(
                                       fontSize: 17, color: AppColors.cream)
                                   : AppTheme.englishTitle(
@@ -1999,11 +2086,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              isKurdish
-                                  ? 'وێنەیەک بۆ پرۆفایلی خۆت هەڵبژێرە'
-                                  : (lang == 'ar'
-                                      ? 'اختر صورة لملفك الشخصي'
-                                      : 'Select a photo for your profile'),
+                              lang == 'kmr'
+                                  ? 'وێنەیەکێ بۆ پرۆفایلێ خۆ هەلبژێرە'
+                                  : (isKurdish
+                                      ? 'وێنەیەک بۆ پرۆفایلی خۆت هەڵبژێرە'
+                                      : (lang == 'ar'
+                                          ? 'اختر صورة لملفك الشخصي'
+                                          : 'Select a photo for your profile')),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: AppColors.faintText,
@@ -2017,11 +2106,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(height: 20),
                   _buildPictureActionTile(
                     icon: Icons.photo_library_rounded,
-                    title: isKurdish
-                        ? 'هەڵبژاردن لە گەلەری'
-                        : (lang == 'ar'
-                            ? 'اختيار من المعرض'
-                            : 'Choose from Gallery'),
+                    title: lang == 'kmr'
+                        ? 'هەلبژارتن ژ گەلەریێ'
+                        : (isKurdish
+                            ? 'هەڵبژاردن لە گەلەری'
+                            : (lang == 'ar'
+                                ? 'اختيار من المعرض'
+                                : 'Choose from Gallery')),
                     color: AppColors.gold,
                     onTap: () async {
                       Navigator.pop(sheetCtx);
@@ -2032,11 +2123,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(height: 10),
                   _buildPictureActionTile(
                     icon: Icons.camera_alt_rounded,
-                    title: isKurdish
-                        ? 'گرتنی وێنە بە کامێرا'
-                        : (lang == 'ar'
-                            ? 'التقاط صورة بالكاميرا'
-                            : 'Take Photo with Camera'),
+                    title: lang == 'kmr'
+                        ? 'گرتنا وێنەی ب کامیرایێ'
+                        : (isKurdish
+                            ? 'گرتنی وێنە بە کامێرا'
+                            : (lang == 'ar'
+                                ? 'التقاط صورة بالكاميرا'
+                                : 'Take Photo with Camera')),
                     color: AppColors.gold,
                     onTap: () async {
                       Navigator.pop(sheetCtx);
@@ -2048,11 +2141,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                     const SizedBox(height: 10),
                     _buildPictureActionTile(
                       icon: Icons.delete_outline_rounded,
-                      title: isKurdish
-                          ? 'سڕینەوەی وێنە'
-                          : (lang == 'ar'
-                              ? 'حذف الصورة الشخصية'
-                              : 'Remove Photo'),
+                      title: lang == 'kmr'
+                          ? 'ژێبرنا وێنەی'
+                          : (isKurdish
+                              ? 'سڕینەوەی وێنە'
+                              : (lang == 'ar'
+                                  ? 'حذف الصورة الشخصية'
+                                  : 'Remove Photo')),
                       color: const Color(0xFFFF5252),
                       isDestructive: true,
                       onTap: () async {
@@ -2232,12 +2327,14 @@ class _SettingsScreenState extends State<SettingsScreen>
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  isKurdish
-                      ? 'ناوی بەکارهێنەر'
-                      : (lang == 'ar' ? 'اسم المستخدم' : 'Your Name'),
+                  lang == 'kmr'
+                      ? 'ناڤێ بکارهێنەری'
+                      : (isKurdish
+                          ? 'ناوی بەکارهێنەر'
+                          : (lang == 'ar' ? 'اسم المستخدم' : 'Your Name')),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: isKurdish
+                  style: isKurdish || lang == 'kmr'
                       ? AppTheme.kurdishTitle(fontSize: 17, color: AppColors.cream)
                       : AppTheme.englishTitle(fontSize: 17, color: AppColors.cream),
                 ),
@@ -2250,12 +2347,14 @@ class _SettingsScreenState extends State<SettingsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
               Text(
-                isKurdish
-                    ? 'ناوی خۆت بنووسە تا لە ئەپەکەدا پیشان بدرێت:'
-                    : (lang == 'ar'
-                        ? 'اكتب اسمك ليتم عرضه في التطبيق:'
-                        : 'Enter your name to personalize your experience:'),
-                style: isKurdish
+                lang == 'kmr'
+                    ? 'ناڤێ خۆ بنڤیسە دا کو د بەرنامەی دا بهێتە نیشاندان:'
+                    : (isKurdish
+                        ? 'ناوی خۆت بنووسە تا لە ئەپەکەدا پیشان بدرێت:'
+                        : (lang == 'ar'
+                            ? 'اكتب اسمك ليتم عرضه في التطبيق:'
+                            : 'Enter your name to personalize your experience:')),
+                style: isKurdish || lang == 'kmr'
                     ? AppTheme.kurdishText(
                         fontSize: 12, color: AppColors.mutedText)
                     : AppTheme.englishText(
@@ -2265,16 +2364,16 @@ class _SettingsScreenState extends State<SettingsScreen>
               TextField(
                 controller: controller,
                 autofocus: true,
-                style: isKurdish
+                style: isKurdish || lang == 'kmr'
                     ? AppTheme.kurdishText(
                         fontSize: 15, color: AppColors.cream)
                     : AppTheme.englishText(
                         fontSize: 15, color: AppColors.cream),
-                textDirection: isKurdish || lang == 'ar'
+                textDirection: isKurdish || lang == 'kmr' || lang == 'ar'
                     ? TextDirection.rtl
                     : TextDirection.ltr,
                 decoration: InputDecoration(
-                  hintText: isKurdish
+                  hintText: isKurdish || lang == 'kmr'
                       ? 'بۆ نموونە: ئەحمەد'
                       : (lang == 'ar' ? 'مثال: أحمد' : 'e.g. Zanyar'),
                   hintStyle: TextStyle(
@@ -2307,9 +2406,11 @@ class _SettingsScreenState extends State<SettingsScreen>
             TextButton(
               onPressed: () => Navigator.pop(dialogCtx),
               child: Text(
-                isKurdish
-                    ? 'پاشگەزبوونەوە'
-                    : (lang == 'ar' ? 'إلغاء' : 'Cancel'),
+                lang == 'kmr'
+                    ? 'پاشگەزبوون'
+                    : (isKurdish
+                        ? 'پاشگەزبوونەوە'
+                        : (lang == 'ar' ? 'إلغاء' : 'Cancel')),
                 style: TextStyle(color: AppColors.faintText),
               ),
             ),
@@ -2334,9 +2435,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
               ),
               child: Text(
-                isKurdish
-                    ? 'تۆمارکردن'
-                    : (lang == 'ar' ? 'حفظ' : 'Save'),
+                lang == 'kmr'
+                    ? 'تۆمارکرن'
+                    : (isKurdish
+                        ? 'تۆمارکردن'
+                        : (lang == 'ar' ? 'حفظ' : 'Save')),
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -2414,12 +2517,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isKurdish
-                                  ? 'ناردنی سەرنج و پێشنیار'
-                                  : (lang == 'ar'
-                                      ? 'إرسال ملاحظة أو اقتراح'
-                                      : 'Send Feedback & Message'),
-                              style: isKurdish
+                              lang == 'kmr'
+                                  ? 'هنارتنا تێبینی و پێشنیاران'
+                                  : (isKurdish
+                                      ? 'ناردنی سەرنج و پێشنیار'
+                                      : (lang == 'ar'
+                                          ? 'إرسال ملاحظة أو اقتراح'
+                                          : 'Send Feedback & Message')),
+                              style: isKurdish || lang == 'kmr'
                                   ? AppTheme.kurdishTitle(
                                       fontSize: 18, color: AppColors.cream)
                                   : AppTheme.englishText(
@@ -2428,7 +2533,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              isKurdish
+                              isKurdish || lang == 'kmr'
                                   ? 'بۆ: $recipient'
                                   : (lang == 'ar'
                                       ? 'إلى: $recipient'
@@ -2457,21 +2562,23 @@ class _SettingsScreenState extends State<SettingsScreen>
                       maxLines: 5,
                       minLines: 4,
                       autofocus: true,
-                      style: isKurdish
+                      style: isKurdish || lang == 'kmr'
                           ? AppTheme.kurdishText(
                               fontSize: 14, color: AppColors.cream)
                           : AppTheme.englishText(
                               fontSize: 14, color: AppColors.cream),
-                      textDirection: isKurdish || lang == 'ar'
+                      textDirection: isKurdish || lang == 'kmr' || lang == 'ar'
                           ? TextDirection.rtl
                           : TextDirection.ltr,
                       decoration: InputDecoration(
-                        hintText: isKurdish
-                            ? 'سەرنج، ڕەخنە، پێشنیار یان کێشەکەت لێرە بنووسە...'
-                            : (lang == 'ar'
-                                ? 'اكتب ملاحظتك، اقتراحك أو مشكلتك هنا...'
-                                : 'Write your feedback, suggestion or bug report here...'),
-                        hintStyle: isKurdish
+                        hintText: lang == 'kmr'
+                            ? 'تێبینی، ڕەخنە، پێشنیار یان ئاریشا خۆ ل ڤێرە بنڤیسە...'
+                            : (isKurdish
+                                ? 'سەرنج، ڕەخنە، پێشنیار یان کێشەکەت لێرە بنووسە...'
+                                : (lang == 'ar'
+                                    ? 'اكتب ملاحظتك، اقتراحك أو مشكلتك هنا...'
+                                    : 'Write your feedback, suggestion or bug report here...')),
+                        hintStyle: isKurdish || lang == 'kmr'
                             ? AppTheme.kurdishText(
                                 fontSize: 13, color: AppColors.mutedText)
                             : AppTheme.englishText(
@@ -2489,11 +2596,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              isKurdish
-                                  ? 'تکایە سەرەتا سەرنج یان پەیامەکەت بنووسە'
-                                  : (lang == 'ar'
-                                      ? 'يرجى كتابة رسالتك أولاً'
-                                      : 'Please write your message first'),
+                              lang == 'kmr'
+                                  ? 'هیڤییە دەستپێکێ تێبینی یان نامەیا خۆ بنڤیسە'
+                                  : (isKurdish
+                                      ? 'تکایە سەرەتا سەرنج یان پەیامەکەت بنووسە'
+                                      : (lang == 'ar'
+                                          ? 'يرجى كتابة رسالتك أولاً'
+                                          : 'Please write your message first')),
                               style: const TextStyle(color: Colors.white),
                             ),
                             backgroundColor: Colors.redAccent,
@@ -2505,11 +2614,13 @@ class _SettingsScreenState extends State<SettingsScreen>
 
                       Navigator.pop(ctx);
 
-                      final subject = isKurdish
-                          ? 'سەرنج لەسەر ئەپی نەدا'
-                          : (lang == 'ar'
-                              ? 'ملاحظات حول تطبيق ندى'
-                              : 'Nada App User Feedback');
+                      final subject = lang == 'kmr'
+                          ? 'تێبینی ل سەر بەرنامەیێ نەدا'
+                          : (isKurdish
+                              ? 'سەرنج لەسەر ئەپی نەدا'
+                              : (lang == 'ar'
+                                  ? 'ملاحظات حول تطبيق ندى'
+                                  : 'Nada App User Feedback'));
 
                       String encodeMailtoParams(Map<String, String> params) {
                         return params.entries
@@ -2547,11 +2658,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
-                                    isKurdish
-                                        ? 'سوپاس بۆ سەرنج و پێشنیارەکەت بۆ باشترکردنی نەدا!'
-                                        : (lang == 'ar'
-                                            ? 'شكراً جزيلاً لملاحظاتكم الكريمة!'
-                                            : 'Thank you for helping us improve Nada!'),
+                                    lang == 'kmr'
+                                        ? 'سوپاس بۆ تێبینی و پێشنیارێن تە بۆ باشترکرنا نەدا!'
+                                        : (isKurdish
+                                            ? 'سوپاس بۆ سەرنج و پێشنیارەکەت بۆ باشترکردنی نەدا!'
+                                            : (lang == 'ar'
+                                                ? 'شكراً جزيلاً لملاحظاتكم الكريمة!'
+                                                : 'Thank you for helping us improve Nada!')),
                                     style: const TextStyle(color: Colors.white),
                                   ),
                                 ),
@@ -2571,10 +2684,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                     },
                     icon: const Icon(Icons.send_rounded, size: 20),
                     label: Text(
-                      isKurdish
-                          ? 'ناردنی پەیام'
-                          : (lang == 'ar' ? 'إرسال الرسالة' : 'Send Feedback'),
-                      style: isKurdish
+                      lang == 'kmr'
+                          ? 'هنارتنا پەیامێ'
+                          : (isKurdish
+                              ? 'ناردنی پەیام'
+                              : (lang == 'ar' ? 'إرسال الرسالة' : 'Send Feedback')),
+                      style: isKurdish || lang == 'kmr'
                           ? AppTheme.kurdishTitle(
                               fontSize: 15, color: Colors.black)
                           : AppTheme.englishTitle(
