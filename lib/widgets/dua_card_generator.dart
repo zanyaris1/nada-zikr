@@ -113,7 +113,9 @@ class DuaCardGeneratorDialog extends StatelessWidget {
                         Text(
                           azkar.arabic,
                           textAlign: TextAlign.center,
-                          style: AppTheme.arabicTitle(fontSize: 20, color: AppColors.cream),
+                          style: azkar.isQuranAyah
+                              ? AppTheme.quranAyahText(fontSize: 22, color: AppColors.cream, height: 2.1)
+                              : AppTheme.arabicTitle(fontSize: 20, color: AppColors.cream),
                           textDirection: TextDirection.rtl,
                         ),
                         const SizedBox(height: 14),

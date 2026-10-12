@@ -40,9 +40,9 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
 
   double get _currentZikrFontSize {
     final len = _currentZikrText.length;
-    if (len > 35) return 18;
-    if (len > 22) return 21;
-    return 26;
+    if (len > 35) return 20;
+    if (len > 22) return 23;
+    return 28;
   }
 
   @override
@@ -384,10 +384,12 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
                         Text(
                           _currentZikrText,
                           textAlign: TextAlign.center,
-                          style: AppTheme.arabicTitle(
+                          textDirection: TextDirection.rtl,
+                          style: AppTheme.quranAyahText(
                             color: AppColors.gold,
                             fontSize: _currentZikrFontSize,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.bold,
+                            height: 1.85,
                           ),
                         ),
                       ],
@@ -396,8 +398,8 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
                   const SizedBox(height: 16),
                   TextField(
                     controller: _customZikrController,
-                    style: AppTheme.englishText(
-                        color: AppColors.cream, fontSize: 14),
+                    style: AppTheme.quranAyahText(
+                        color: AppColors.gold, fontSize: 16, height: 1.6),
                     textDirection: TextDirection.rtl,
                     onChanged: (value) {
                       final trimmed = value.trim();
@@ -462,7 +464,7 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
                           onTap: () => _selectPreset(item),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 10),
+                                horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
                               color: active
                                   ? AppColors.gold.withValues(alpha: 0.18)
@@ -477,10 +479,13 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
                             child: Center(
                               child: Text(
                                 item,
-                                style: AppTheme.arabicText(
+                                textDirection: TextDirection.rtl,
+                                style: AppTheme.quranAyahText(
                                   color:
                                       active ? AppColors.gold : AppColors.cream,
-                                  fontSize: 13,
+                                  fontSize: 15,
+                                  fontWeight: active ? FontWeight.bold : FontWeight.w500,
+                                  height: 1.5,
                                 ),
                               ),
                             ),

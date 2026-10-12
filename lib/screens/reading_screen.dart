@@ -10,6 +10,7 @@ import '../services/hadith_service.dart';
 import '../services/quran_dua_service.dart';
 import '../services/zikr_audio_service.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../widgets/app_theme.dart';
 import '../widgets/dua_card_generator.dart';
 
@@ -292,32 +293,150 @@ class _ReadingScreenState extends State<ReadingScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                     child: Column(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: AppColors.panelColor,
-                            border:
-                                Border.all(color: AppColors.panelBorderColor),
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          child: Column(
-                            children: [
-                              if (ZikrAudioService.hasAudioForCategory(widget.category.id)) ...[
-                                Align(
-                                  alignment: AlignmentDirectional.centerStart,
-                                  child: _buildAudioButton(current, isKurdish, isKurmanji, lang),
-                                ),
-                                const SizedBox(height: 16),
-                              ],
-                              Text(
-                                current.displayArabic,
-                                style: AppTheme.arabicTitle(fontSize: 24),
-                                textAlign: TextAlign.center,
-                                textDirection: TextDirection.rtl,
+                        () {
+                          final bool isQuran = current.isQuranAyah ||
+                              widget.category.id == 'surah_mulk' ||
+                              widget.category.id == 'surah_kahf' ||
+                              widget.category.id == 'ayat_kursi' ||
+                              widget.category.id == 'quran';
+                          final quranTitle = current.getQuranTitle(lang);
+                          final rawArabic = current.displayArabic;
+
+                          // Check if starts with Bismillah
+                          final bismillahPattern = RegExp(
+                            r'^بِسْمِ\s+اللَّهِ\s+الرَّحْمَٰنِ\s+الرَّحِيمِ(?:\s*۝)?\s*',
+                            unicode: true,
+                          );
+                          final bismillahMatch = bismillahPattern.firstMatch(rawArabic);
+                          final hasLeadingBismillah = isQuran &&
+                              bismillahMatch != null &&
+                              bismillahMatch.end < rawArabic.length;
+                          final remainingAyahText = hasLeadingBismillah
+                              ? rawArabic.substring(bismillahMatch.end).trim()
+                              : rawArabic;
+
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 22, vertical: 24),
+                            decoration: BoxDecoration(
+                              color: AppColors.panelColor,
+                              border: Border.all(
+                                color: isQuran
+                                    ? AppColors.gold.withValues(alpha: 0.35)
+                                    : AppColors.panelBorderColor,
                               ),
-                            ],
-                          ),
-                        ),
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: isQuran
+                                  ? [
+                                      BoxShadow(
+                                        color: AppColors.gold.withValues(alpha: 0.04),
+                                        blurRadius: 18,
+                                        spreadRadius: 2,
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Column(
+                              children: [
+                                if (ZikrAudioService.hasAudioForCategory(widget.category.id)) ...[
+                                  Align(
+                                    alignment: AlignmentDirectional.centerStart,
+                                    child: _buildAudioButton(current, isKurdish, isKurmanji, lang),
+                                  ),
+                                  const SizedBox(height: 14),
+                                ],
+                                // Dignified Quran Banner / Header if Ayah or Surah
+                                if (isQuran && quranTitle != null && quranTitle.isNotEmpty) ...[
+                                  Container(
+                                    margin: const EdgeInsets.only(bottom: 16),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 6.5),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          AppColors.gold.withValues(alpha: 0.05),
+                                          AppColors.gold.withValues(alpha: 0.16),
+                                          AppColors.gold.withValues(alpha: 0.05),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: AppColors.gold.withValues(alpha: 0.38),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          '۞',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: AppColors.gold.withValues(alpha: 0.85),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          quranTitle,
+                                          style: AppTheme.quranAyahText(
+                                            fontSize: 14.5,
+                                            color: AppColors.gold,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '۞',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: AppColors.gold.withValues(alpha: 0.85),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                // Centered Bismillah when verse has leading Basmala
+                                if (hasLeadingBismillah) ...[
+                                  Center(
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+                                        textAlign: TextAlign.center,
+                                        textDirection: TextDirection.rtl,
+                                        style: AppTheme.quranAyahText(
+                                          fontSize: 21,
+                                          color: AppColors.gold,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                ],
+                                // Authentic Quran Text / Spiritual Calligraphy
+                                Text(
+                                  isQuran ? remainingAyahText : rawArabic,
+                                  style: isQuran
+                                      ? AppTheme.quranAyahText(
+                                          fontSize: 26,
+                                          color: const Color(0xFFFFFBEB),
+                                          height: 2.15,
+                                        )
+                                      : GoogleFonts.scheherazadeNew(
+                                          fontSize: 25,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFFFFFBEB),
+                                          height: 2.05,
+                                        ),
+                                  textAlign: TextAlign.center,
+                                  textDirection: TextDirection.rtl,
+                                ),
+                              ],
+                            ),
+                          );
+                        }(),
                         const SizedBox(height: 24),
                         // Meaning Section: toggle between Kurdish and English
                         () {

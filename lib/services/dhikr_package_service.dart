@@ -138,13 +138,21 @@ class DhikrPackageService {
         final itemArabic = splitSurahs[index];
         final surahMeaning = _surahMeaningFor(itemArabic);
 
+        final surahTitle = itemArabic.contains('قُلْ هُوَ اللَّهُ أَحَدٌ')
+            ? 'سوورەتی ئیخڵاس [112: 1-4]'
+            : itemArabic.contains('قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ')
+                ? 'سوورەتی فەلەق [113: 1-5]'
+                : itemArabic.contains('قُلْ أَعُوذُ بِرَبِّ النَّاسِ')
+                    ? 'سوورەتی ناس [114: 1-6]'
+                    : 'سوورەت';
+
         return Azkar(
           id: _splitEntryId(id, index),
           arabic: itemArabic,
           translation: surahMeaning['en'] ?? '',
           kurdishTranslation: surahMeaning['ku'] ?? '',
           repeat: 3,
-          source: 'imanikurd',
+          source: surahTitle,
         );
       });
     }
