@@ -9,7 +9,7 @@ dependencies:
   flutter:
     sdk: flutter
   
-  # State & data persistence
+  # State & data persistence 
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   path_provider: ^2.1.6
