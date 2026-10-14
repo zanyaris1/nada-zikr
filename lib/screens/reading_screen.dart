@@ -10,7 +10,6 @@ import '../services/hadith_service.dart';
 import '../services/quran_dua_service.dart';
 import '../services/zikr_audio_service.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../widgets/app_theme.dart';
 import '../widgets/dua_card_generator.dart';
 
@@ -421,13 +420,13 @@ class _ReadingScreenState extends State<ReadingScreen> {
                                   style: isQuran
                                       ? AppTheme.quranAyahText(
                                           fontSize: 26,
-                                          color: const Color(0xFFFFFBEB),
+                                          color: AppColors.cream,
                                           height: 2.15,
                                         )
-                                      : GoogleFonts.scheherazadeNew(
+                                      : AppTheme.zikrText(
                                           fontSize: 25,
                                           fontWeight: FontWeight.w500,
-                                          color: const Color(0xFFFFFBEB),
+                                          color: AppColors.cream,
                                           height: 2.05,
                                         ),
                                   textAlign: TextAlign.center,

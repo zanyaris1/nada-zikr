@@ -90,11 +90,50 @@ class PrayerWidgetService {
     return (elapsedMs / totalMs).clamp(0.0, 1.0);
   }
 
+  /// Immediately saves active theme key and refreshes native Android & iOS widgets.
+  static Future<void> updateTheme([String? themeKey]) async {
+    try {
+      await _ensureInit();
+      String key = themeKey ?? AppThemeController.instance.palette.key;
+      if (key.isEmpty) {
+        final stored = await StorageService.readSetting('appTheme', defaultValue: 'nuri');
+        key = stored?.toString() ?? 'nuri';
+      }
+      final currentPalette = AppPalettes.byKey(key);
+      await _save('theme_key', currentPalette.key);
+      await _save('theme_is_dark', currentPalette.isDark ? '1' : '0');
+
+      await HomeWidget.updateWidget(
+        name: androidWidgetProvider,
+        androidName: androidWidgetProvider,
+        qualifiedAndroidName: 'com.nada.zikrakanm.PrayerTimesWidgetProvider',
+        iOSName: iOSWidgetName,
+      );
+    } catch (e) {
+      debugPrint('PrayerWidgetService updateTheme error: $e');
+    }
+  }
+
   /// Pushes the latest calculated prayer times to native Android and iOS widgets.
   static Future<void> updateWidgets({String? specificCityId}) async {
     try {
       // Always ensure the App Group is registered before writing anything
       await _ensureInit();
+
+      // Ensure theme key is saved upfront so widget theme is never stale
+      try {
+        final activePalette = AppThemeController.instance.palette;
+        String themeKey = activePalette.key;
+        if (themeKey.isEmpty) {
+          final stored = await StorageService.readSetting('appTheme', defaultValue: 'nuri');
+          themeKey = stored?.toString() ?? 'nuri';
+        }
+        final currentPalette = AppPalettes.byKey(themeKey);
+        await _save('theme_key', currentPalette.key);
+        await _save('theme_is_dark', currentPalette.isDark ? '1' : '0');
+      } catch (e) {
+        debugPrint('PrayerWidgetService upfront theme saving error: $e');
+      }
 
       final schedule = await PrayerRepository.getPrayerScheduleForDate(
         date: DateTime.now(),
@@ -263,6 +302,8 @@ class PrayerWidgetService {
       // Trigger native widget refresh
       await HomeWidget.updateWidget(
         name: androidWidgetProvider,
+        androidName: androidWidgetProvider,
+        qualifiedAndroidName: 'com.nada.zikrakanm.PrayerTimesWidgetProvider',
         iOSName: iOSWidgetName,
       );
     } catch (e) {

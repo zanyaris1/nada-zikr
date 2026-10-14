@@ -83,6 +83,11 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
 
   void _updateCountdown() {
     if (!mounted) return;
+    // Auto-refresh when the countdown reaches/passes zero (prayer time arrived)
+    if (_timeUntilNext.inSeconds <= 0 && _timeUntilNext != Duration.zero) {
+      _refreshSchedule();
+      return;
+    }
     setState(() {});
   }
 
@@ -559,7 +564,15 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
                   ),
 
                   Expanded(
-                    child: SingleChildScrollView(
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        _refreshSchedule();
+                        await Future.delayed(const Duration(milliseconds: 600));
+                      },
+                      color: AppColors.gold,
+                      backgroundColor: AppColors.panelColor,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Column(
                         children: [
@@ -838,6 +851,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
                           const SizedBox(height: 24),
                         ],
                       ),
+                    ),
                     ),
                   ),
                 ],

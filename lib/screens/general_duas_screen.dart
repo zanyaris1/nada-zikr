@@ -779,10 +779,11 @@ class _GeneralDuasScreenState extends State<GeneralDuasScreen> {
               dua.arabic,
               textDirection: TextDirection.rtl,
               textAlign: TextAlign.right,
-              style: AppTheme.arabicTitle(
-                color: const Color(0xFFFFFBEB),
-                fontSize: 18,
-                height: 1.8,
+              style: AppTheme.zikrText(
+                color: AppColors.cream,
+                fontSize: 22,
+                fontWeight: FontWeight.w500,
+                height: 1.95,
               ),
             ),
             if (dua.kurdishMeaning.isNotEmpty) ...[

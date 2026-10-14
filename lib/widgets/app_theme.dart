@@ -292,6 +292,7 @@ class AppThemeController extends ChangeNotifier {
     _palette = AppPalettes.byKey(key);
     await StorageService.saveSetting('appTheme', key);
     notifyListeners();
+    unawaited(PrayerWidgetService.updateTheme(key));
     unawaited(PrayerWidgetService.updateWidgets());
   }
 }
@@ -383,6 +384,22 @@ class AppTheme {
       fontFeatures: const [
         FontFeature('cv72', 1),
       ],
+    );
+  }
+
+  // Scheherazade New for Hadiths, Prophetic Invocations, and Adhkar (as seen in Morning Zikr)
+  static TextStyle zikrText({
+    Color? color,
+    double fontSize = 25,
+    FontWeight fontWeight = FontWeight.w500,
+    double height = 2.05,
+  }) {
+    return GoogleFonts.scheherazadeNew(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color ?? AppColors.cream,
+      height: height,
+      letterSpacing: 0,
     );
   }
 

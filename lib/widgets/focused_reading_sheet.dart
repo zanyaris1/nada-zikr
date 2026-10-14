@@ -208,13 +208,13 @@ class _FocusedReadingSheetState extends State<FocusedReadingSheet> {
                       style: widget.isAyah
                           ? AppTheme.quranAyahText(
                               fontSize: 27,
-                              color: const Color(0xFFFFFBEB),
+                              color: AppColors.cream,
                               height: 2.1,
                             )
-                          : GoogleFonts.scheherazadeNew(
+                          : AppTheme.zikrText(
                               fontSize: 26,
                               fontWeight: FontWeight.w500,
-                              color: const Color(0xFFFFFBEB),
+                              color: AppColors.cream,
                               height: 2.05,
                             ),
                     ),

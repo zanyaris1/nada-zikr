@@ -181,6 +181,11 @@ struct PrayerEntry: TimelineEntry {
     let themeKey: String
 
     // MARK: - Live Countdown (always accurate — computed fresh at every SwiftUI render)
+    var nextPrayerDate: Date? {
+        guard nextPrayerTimestamp > 0 else { return nil }
+        return Date(timeIntervalSince1970: nextPrayerTimestamp)
+    }
+
     var liveRemainingText: String {
         guard nextPrayerTimestamp > 0 else { return "" }
         let target = Date(timeIntervalSince1970: nextPrayerTimestamp)
@@ -209,6 +214,7 @@ private struct PrayerSlot: Identifiable {
     let nameKu: String
     let nameAr: String
     let nameEn: String
+    let iconName: String
     let time: String
     var isNext: Bool = false
 }
@@ -255,17 +261,45 @@ struct PrayerTimelineProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<PrayerEntry>) -> ()) {
         let entry = fetchCurrentEntry()
         let now = Date()
-        let prayerDate = Date(timeIntervalSince1970: entry.nextPrayerTimestamp)
-        let fifteenMin = now.addingTimeInterval(900)
-        let nextUpdate: Date
-        if prayerDate > now && prayerDate < fifteenMin {
-            nextUpdate = prayerDate
-        } else {
-            nextUpdate = fifteenMin
+        let cal = Calendar.current
+
+        // Parse all prayer time strings into future Date objects for today
+        let timeStrings: [String] = [entry.fajr, entry.sunrise, entry.dhuhr, entry.asr, entry.maghrib, entry.isha]
+        var futureDates: [Date] = timeStrings.compactMap { timeStr -> Date? in
+            guard timeStr != "--:--" else { return nil }
+            let parts = timeStr.components(separatedBy: CharacterSet(charactersIn: " :"))
+            guard parts.count >= 2, let h = Int(parts[0]), let m = Int(parts[1]) else { return nil }
+            var hour = h
+            if parts.count >= 3 {
+                let ampm = parts[2].uppercased()
+                if ampm == "PM" && h != 12 { hour = h + 12 }
+                if ampm == "AM" && h == 12 { hour = 0 }
+            }
+            var comps = cal.dateComponents([.year, .month, .day], from: now)
+            comps.hour = hour; comps.minute = m; comps.second = 0
+            return cal.date(from: comps)
+        }.filter { $0 > now }.sorted()
+
+        // Also refresh every 15 minutes as fallback
+        futureDates.append(now.addingTimeInterval(900))
+
+        // Build an entry for each refresh point (widget re-reads SharedPrefs at each date)
+        let extraEntries: [PrayerEntry] = futureDates.prefix(7).map { date in
+            PrayerEntry(
+                date: date,
+                cityName: entry.cityName, hijriDate: entry.hijriDate,
+                nextPrayerName: entry.nextPrayerName, nextPrayerTime: entry.nextPrayerTime,
+                nextPrayerTimestamp: entry.nextPrayerTimestamp, nextPrayerId: entry.nextPrayerId,
+                fajr: entry.fajr, sunrise: entry.sunrise, dhuhr: entry.dhuhr,
+                asr: entry.asr, maghrib: entry.maghrib, isha: entry.isha,
+                isKurdish: entry.isKurdish, isArabic: entry.isArabic, themeKey: entry.themeKey
+            )
         }
-        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
+        let policyDate = futureDates.last ?? now.addingTimeInterval(900)
+        let timeline = Timeline(entries: [entry] + extraEntries, policy: .after(policyDate))
         completion(timeline)
     }
+
 
     private func fetchCurrentEntry() -> PrayerEntry {
         let prefs = UserDefaults(suiteName: appGroupId)
@@ -313,39 +347,52 @@ struct PrayerTimelineProvider: TimelineProvider {
     }
 }
 
-// MARK: - Shared Row View
+// MARK: - Shared Views
 
-private struct PrayerRow: View {
+private struct PrayerCard: View {
     let name: String
     let time: String
+    let iconName: String
     let isNext: Bool
     let textColor: Color
     let activeColor: Color
     let activeBg: Color
+    let inactiveBg: Color
+    let activeBorder: Color
 
-    /// Guarantees clean, non-wrapping time display (e.g. '04:12')
     private var cleanTime: String {
         let parts = time.components(separatedBy: " ")
         return parts.first ?? time
     }
 
     var body: some View {
-        HStack {
+        VStack(spacing: 3) {
+            Image(systemName: iconName)
+                .font(.system(size: 13, weight: isNext ? .bold : .medium))
+                .foregroundColor(isNext ? activeColor : textColor.opacity(0.85))
+                .frame(height: 14)
+
             Text(name)
-                .font(.system(size: 11, weight: isNext ? .bold : .medium))
+                .font(.system(size: 9.5, weight: isNext ? .bold : .medium))
                 .foregroundColor(isNext ? activeColor : textColor.opacity(0.85))
                 .lineLimit(1)
-            Spacer(minLength: 4)
+                .minimumScaleFactor(0.7)
+
             Text(cleanTime)
-                .font(.system(size: 11, weight: isNext ? .bold : .regular, design: .monospaced))
+                .font(.system(size: 11, weight: isNext ? .bold : .semibold, design: .monospaced))
                 .foregroundColor(isNext ? activeColor : textColor)
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .minimumScaleFactor(0.75)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3.5)
-        .background(isNext ? activeBg : Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.vertical, 4)
+        .padding(.horizontal, 2)
+        .background(isNext ? activeBg : inactiveBg)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(isNext ? activeBorder : Color.clear, lineWidth: isNext ? 1.5 : 0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
 
@@ -361,13 +408,25 @@ struct PrayerTimesWidgetEntryView: View {
 
     private func prayerSlots() -> [PrayerSlot] {
         [
-            PrayerSlot(id: "fajr",    nameKu: "بەیانی",   nameAr: "الفجر",   nameEn: "Fajr",    time: entry.fajr,    isNext: entry.nextPrayerId == "fajr"),
-            PrayerSlot(id: "sunrise", nameKu: "خۆرهەڵات", nameAr: "الشروق",  nameEn: "Sunrise", time: entry.sunrise, isNext: entry.nextPrayerId == "sunrise"),
-            PrayerSlot(id: "dhuhr",   nameKu: "نیوەڕۆ",   nameAr: "الظهر",   nameEn: "Dhuhr",   time: entry.dhuhr,   isNext: entry.nextPrayerId == "dhuhr"),
-            PrayerSlot(id: "asr",     nameKu: "عەسر",     nameAr: "العصر",   nameEn: "Asr",     time: entry.asr,     isNext: entry.nextPrayerId == "asr"),
-            PrayerSlot(id: "maghrib", nameKu: "شێوان",    nameAr: "المغرب",  nameEn: "Maghrib", time: entry.maghrib, isNext: entry.nextPrayerId == "maghrib"),
-            PrayerSlot(id: "isha",    nameKu: "خەوتنان",  nameAr: "العشاء",  nameEn: "Isha",    time: entry.isha,    isNext: entry.nextPrayerId == "isha"),
+            PrayerSlot(id: "fajr",    nameKu: "بەیانی",     nameAr: "الفجر",   nameEn: "Fajr",    iconName: "sun.horizon.fill",     time: entry.fajr,    isNext: entry.nextPrayerId == "fajr"),
+            PrayerSlot(id: "sunrise", nameKu: "خۆرهەڵاتن",  nameAr: "الشروق",  nameEn: "Sunrise", iconName: "sun.and.horizon.fill", time: entry.sunrise, isNext: entry.nextPrayerId == "sunrise"),
+            PrayerSlot(id: "dhuhr",   nameKu: "نیوەڕۆ",     nameAr: "الظهر",   nameEn: "Dhuhr",   iconName: "sun.max.fill",         time: entry.dhuhr,   isNext: entry.nextPrayerId == "dhuhr"),
+            PrayerSlot(id: "asr",     nameKu: "عەسر",       nameAr: "العصر",   nameEn: "Asr",     iconName: "sun.haze.fill",        time: entry.asr,     isNext: entry.nextPrayerId == "asr"),
+            PrayerSlot(id: "maghrib", nameKu: "شێوان",      nameAr: "المغرب",  nameEn: "Maghrib", iconName: "sunset.fill",          time: entry.maghrib, isNext: entry.nextPrayerId == "maghrib"),
+            PrayerSlot(id: "isha",    nameKu: "خەوتنان",    nameAr: "العشاء",  nameEn: "Isha",    iconName: "moon.stars.fill",      time: entry.isha,    isNext: entry.nextPrayerId == "isha"),
         ]
+    }
+
+    private func upcomingThreeSlots() -> [PrayerSlot] {
+        let slots = prayerSlots()
+        if let nextIndex = slots.firstIndex(where: { $0.isNext }) {
+            var result: [PrayerSlot] = []
+            for i in 0..<3 {
+                result.append(slots[(nextIndex + i) % slots.count])
+            }
+            return result
+        }
+        return Array(slots.prefix(3))
     }
 
     private func prayerName(_ slot: PrayerSlot) -> String {
@@ -378,6 +437,27 @@ struct PrayerTimesWidgetEntryView: View {
 
     private var appTitle: String {
         (entry.isKurdish || entry.isArabic) ? "نەدا" : "Nada"
+    }
+
+    private var remainingLabel: String {
+        if entry.isKurdish { return "کاتی ماوە" }
+        if entry.isArabic  { return "الوقت المتبقي" }
+        return "Time Left"
+    }
+
+    private var cleanNextPrayerName: String {
+        var name = entry.nextPrayerName
+        if name.starts(with: "بانگی ") {
+            name = String(name.dropFirst(6))
+        } else if name.starts(with: "صلاة ") {
+            name = String(name.dropFirst(5))
+        }
+        return name
+    }
+
+    private func cleanTime(_ timeStr: String) -> String {
+        let parts = timeStr.components(separatedBy: " ")
+        return parts.first ?? timeStr
     }
 
     var body: some View {
@@ -406,199 +486,318 @@ struct PrayerTimesWidgetEntryView: View {
         }
     }
 
-    // MARK: - Small Widget (Clean, Simple, Themed)
+    // MARK: - Small Widget (Balanced, Compact, No Dead Space)
     var smallWidget: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // Header
-            HStack {
-                Text(appTitle)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(theme.primary)
-                Spacer()
-                Text(entry.cityName)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(theme.secondary.opacity(0.80))
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 0)
-
-            // Next Prayer Info
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.nextPrayerName)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(theme.primary)
-                    .lineLimit(1)
-
-                Text(entry.nextPrayerTime)
-                    .font(.system(size: 24, weight: .heavy, design: .rounded))
-                    .foregroundColor(theme.secondary)
-                    .minimumScaleFactor(0.75)
-            }
-
-            if !entry.liveRemainingText.isEmpty {
-                Text(entry.liveRemainingText)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(theme.primary)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(theme.cardBackground)
-                    .clipShape(Capsule())
-            }
-
-            Spacer(minLength: 0)
-
-            // Hijri Date
-            if !entry.hijriDate.isEmpty {
-                Text(entry.hijriDate)
-                    .font(.system(size: 9))
-                    .foregroundColor(theme.muted)
-                    .lineLimit(1)
-            }
-        }
-        .padding(14)
-    }
-
-    // MARK: - Medium Widget (Balanced 2-Column: Hero + 6 Prayers)
-    var mediumWidget: some View {
-        HStack(spacing: 12) {
-
-            // Left: Next Prayer
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 4) {
-                    Text(appTitle)
-                        .font(.system(size: 13, weight: .bold))
+        VStack(spacing: 4) {
+            // Top Header: City & Pin + App Title
+            HStack(alignment: .center) {
+                HStack(spacing: 3) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 11))
                         .foregroundColor(theme.primary)
-                    Text("• \(entry.cityName)")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(theme.secondary.opacity(0.80))
+                    Text(entry.cityName)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(theme.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Text(appTitle)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(theme.primary)
+            }
+
+            // Hero Card: Next Prayer
+            VStack(spacing: 2) {
+                HStack(spacing: 4) {
+                    if let nextSlot = prayerSlots().first(where: { $0.isNext }) {
+                        Image(systemName: nextSlot.iconName)
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(theme.primary)
+                    }
+                    Text(cleanNextPrayerName)
+                        .font(.system(size: 11.5, weight: .bold))
+                        .foregroundColor(theme.primary)
                         .lineLimit(1)
                 }
 
-                Spacer(minLength: 0)
-
-                Text(entry.nextPrayerName)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(theme.primary)
-
-                Text(entry.nextPrayerTime)
-                    .font(.system(size: 25, weight: .heavy, design: .rounded))
+                Text(cleanTime(entry.nextPrayerTime))
+                    .font(.system(size: 21, weight: .heavy, design: .rounded))
                     .foregroundColor(theme.secondary)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    .minimumScaleFactor(0.8)
 
-                if !entry.liveRemainingText.isEmpty {
-                    Text(entry.liveRemainingText)
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(theme.primary)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(theme.cardBackground)
-                        .clipShape(Capsule())
-                }
-
-                Spacer(minLength: 0)
-
-                if !entry.hijriDate.isEmpty {
-                    Text(entry.hijriDate)
+                // Countdown Pill
+                HStack(spacing: 3) {
+                    if let target = entry.nextPrayerDate, target > Date() {
+                        Text(target, style: .timer)
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundColor(theme.primary)
+                            .lineLimit(1)
+                    } else {
+                        Text(entry.liveRemainingText.isEmpty ? (entry.isKurdish ? "کاتی بانگە" : "Now") : entry.liveRemainingText)
+                            .font(.system(size: 9.5, weight: .bold))
+                            .foregroundColor(theme.primary)
+                            .lineLimit(1)
+                    }
+                    Text("⌛")
                         .font(.system(size: 9))
-                        .foregroundColor(theme.muted)
                 }
+                .padding(.horizontal, 7)
+                .padding(.vertical, 2.5)
+                .background(theme.cardBackground)
+                .overlay(Capsule().stroke(theme.cardBorder, lineWidth: 0.8))
+                .clipShape(Capsule())
             }
-            .frame(maxWidth: 130, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.vertical, 3)
+            .background(theme.cellActiveBg.opacity(0.5))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(theme.cardBorder, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-            // Divider
-            Rectangle()
-                .fill(theme.primary.opacity(0.20))
-                .frame(width: 0.75)
-                .padding(.vertical, 4)
-
-            // Right: 6 Prayers
-            VStack(spacing: 3) {
-                let slots = prayerSlots()
+            // Mini 3-Prayer bar at bottom (Fills remaining space without blank gap)
+            HStack(spacing: 3) {
+                let slots = upcomingThreeSlots()
                 ForEach(slots) { slot in
-                    PrayerRow(
-                        name: prayerName(slot),
-                        time: slot.time,
-                        isNext: slot.isNext,
-                        textColor: theme.secondary,
-                        activeColor: theme.primary,
-                        activeBg: theme.cellActiveBg
-                    )
+                    VStack(spacing: 1) {
+                        Text(prayerName(slot))
+                            .font(.system(size: 8, weight: slot.isNext ? .bold : .medium))
+                            .foregroundColor(slot.isNext ? theme.primary : theme.secondary.opacity(0.8))
+                            .lineLimit(1)
+                        Text(cleanTime(slot.time))
+                            .font(.system(size: 8.5, weight: slot.isNext ? .bold : .regular, design: .monospaced))
+                            .foregroundColor(slot.isNext ? theme.primary : theme.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 2.5)
+                    .background(slot.isNext ? theme.cellActiveBg : theme.cardBackground.opacity(0.4))
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 }
             }
         }
-        .padding(12)
+        .padding(9)
+        .environment(\.layoutDirection, (entry.isKurdish || entry.isArabic) ? .rightToLeft : .leftToRight)
     }
 
-    // MARK: - Large Widget (Spacious, Clean, Themed)
-    var largeWidget: some View {
-        VStack(alignment: .leading, spacing: 0) {
-
-            // Header
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(appTitle)
-                        .font(.system(size: 16, weight: .bold))
+    // MARK: - Medium Widget (Header, Next Prayer Hero & 6-Prayer Schedule – Identical to Screenshot)
+    var mediumWidget: some View {
+        VStack(spacing: 6) {
+            // Header (Top Line)
+            HStack(alignment: .center) {
+                // Right (in RTL): City + Pin
+                HStack(spacing: 4) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 13))
                         .foregroundColor(theme.primary)
                     Text(entry.cityName)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(theme.secondary.opacity(0.80))
+                        .font(.system(size: 12.5, weight: .bold))
+                        .foregroundColor(theme.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 4)
+
+                // Left (in RTL): "کاتی ماوە"
+                Text(remainingLabel)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(theme.muted)
+                    .lineLimit(1)
+            }
+
+            // Subheader (Hero Line)
+            HStack(alignment: .center, spacing: 6) {
+                // Right (in RTL): Next prayer title + name + time badge
+                HStack(spacing: 4) {
+                    Text(entry.isKurdish ? "بانگی داهاتوو:" : (entry.isArabic ? "الصلاة القادمة:" : "Next:"))
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundColor(theme.secondary.opacity(0.85))
+                        .lineLimit(1)
+
+                    Text(cleanNextPrayerName)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(theme.primary)
+                        .lineLimit(1)
+
+                    HStack(spacing: 3) {
+                        Text(cleanTime(entry.nextPrayerTime))
+                            .font(.system(size: 10.5, weight: .bold, design: .monospaced))
+                            .foregroundColor(theme.primary)
+                            .lineLimit(1)
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 8.5))
+                            .foregroundColor(theme.primary)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(theme.cardBackground)
+                    .overlay(Capsule().stroke(theme.cardBorder, lineWidth: 0.8))
+                    .clipShape(Capsule())
+                }
+
+                Spacer(minLength: 4)
+
+                // Left (in RTL): Countdown Pill
+                HStack(spacing: 3) {
+                    if let target = entry.nextPrayerDate, target > Date() {
+                        Text(target, style: .timer)
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundColor(theme.primary)
+                            .lineLimit(1)
+                    } else {
+                        Text(entry.liveRemainingText.isEmpty ? (entry.isKurdish ? "کاتی بانگە" : "Now") : entry.liveRemainingText)
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(theme.primary)
+                            .lineLimit(1)
+                    }
+                    Text("⌛")
+                        .font(.system(size: 9))
+                }
+                .padding(.horizontal, 7)
+                .padding(.vertical, 2.5)
+                .background(Color(hex: 0x071D18).opacity(0.85))
+                .overlay(Capsule().stroke(theme.cardBorder, lineWidth: 0.9))
+                .clipShape(Capsule())
+            }
+
+            // Bottom Line: 6 Prayer Cards filling all remaining space
+            HStack(spacing: 4) {
+                let slots = prayerSlots()
+                ForEach(slots) { slot in
+                    PrayerCard(
+                        name: prayerName(slot),
+                        time: slot.time,
+                        iconName: slot.iconName,
+                        isNext: slot.isNext,
+                        textColor: theme.secondary,
+                        activeColor: theme.primary,
+                        activeBg: theme.cellActiveBg,
+                        inactiveBg: theme.cardBackground.opacity(0.35),
+                        activeBorder: theme.primary
+                    )
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .padding(10)
+        .environment(\.layoutDirection, (entry.isKurdish || entry.isArabic) ? .rightToLeft : .leftToRight)
+    }
+
+    // MARK: - Large Widget (Spacious, Fully Balanced, Zero Empty Gaps)
+    var largeWidget: some View {
+        VStack(spacing: 8) {
+            // Top Header: City & Pin + Hijri Date + App Title
+            HStack(alignment: .center) {
+                HStack(spacing: 4) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(theme.primary)
+                    Text(entry.cityName)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(theme.secondary)
                 }
                 Spacer()
                 if !entry.hijriDate.isEmpty {
                     Text(entry.hijriDate)
-                        .font(.system(size: 11))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(theme.muted)
                 }
             }
-            .padding(.bottom, 12)
 
             // Hero Next Prayer Banner
-            HStack {
+            HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(entry.nextPrayerName)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(theme.primary)
-                    if !entry.liveRemainingText.isEmpty {
-                        Text(entry.liveRemainingText)
+                    HStack(spacing: 4) {
+                        Text(entry.isKurdish ? "بانگی داهاتوو:" : "Next Prayer:")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(theme.secondary.opacity(0.85))
+                        Text(cleanNextPrayerName)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(theme.primary)
                     }
+
+                    // Countdown Pill
+                    HStack(spacing: 4) {
+                        if let target = entry.nextPrayerDate, target > Date() {
+                            Text(target, style: .timer)
+                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                .foregroundColor(theme.primary)
+                        } else {
+                            Text(entry.liveRemainingText.isEmpty ? "Now" : entry.liveRemainingText)
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(theme.primary)
+                        }
+                        Text("⌛")
+                            .font(.system(size: 10))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3.5)
+                    .background(theme.cellActiveBg)
+                    .overlay(Capsule().stroke(theme.cardBorder, lineWidth: 1))
+                    .clipShape(Capsule())
                 }
+
                 Spacer()
-                Text(entry.nextPrayerTime)
-                    .font(.system(size: 24, weight: .heavy, design: .rounded))
+
+                Text(cleanTime(entry.nextPrayerTime))
+                    .font(.system(size: 26, weight: .heavy, design: .rounded))
                     .foregroundColor(theme.primary)
+                    .minimumScaleFactor(0.8)
+                    .lineLimit(1)
             }
-            .padding(12)
+            .padding(11)
             .background(theme.cardBackground)
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(theme.cardBorder, lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .padding(.bottom, 12)
 
-            // Prayer List
+            // 6 Prayers filling remaining height evenly
             let slots = prayerSlots()
             VStack(spacing: 5) {
                 ForEach(slots) { slot in
-                    PrayerRow(
-                        name: prayerName(slot),
-                        time: slot.time,
-                        isNext: slot.isNext,
-                        textColor: theme.secondary,
-                        activeColor: theme.primary,
-                        activeBg: theme.cellActiveBg
+                    HStack(spacing: 10) {
+                        Image(systemName: slot.iconName)
+                            .font(.system(size: 13, weight: slot.isNext ? .bold : .medium))
+                            .foregroundColor(slot.isNext ? theme.primary : theme.secondary.opacity(0.85))
+                            .frame(width: 18)
+
+                        Text(prayerName(slot))
+                            .font(.system(size: 12.5, weight: slot.isNext ? .bold : .medium))
+                            .foregroundColor(slot.isNext ? theme.primary : theme.secondary)
+                            .lineLimit(1)
+
+                        Spacer()
+
+                        Text(cleanTime(slot.time))
+                            .font(.system(size: 12.5, weight: slot.isNext ? .bold : .semibold, design: .monospaced))
+                            .foregroundColor(slot.isNext ? theme.primary : theme.secondary)
+                            .lineLimit(1)
+
+                        if slot.isNext {
+                            Circle()
+                                .fill(theme.primary)
+                                .frame(width: 6, height: 6)
+                        }
+                    }
+                    .padding(.horizontal, 11)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(slot.isNext ? theme.cellActiveBg : theme.cardBackground.opacity(0.35))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(slot.isNext ? theme.cardBorder : Color.clear, lineWidth: slot.isNext ? 1 : 0)
                     )
-                    .padding(.vertical, 1)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
             }
-
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding(16)
+        .padding(13)
+        .environment(\.layoutDirection, (entry.isKurdish || entry.isArabic) ? .rightToLeft : .leftToRight)
     }
 
     // MARK: - Lock Screen Widgets (iOS 16+, No Emojis)

@@ -396,12 +396,12 @@ class _HadithScreenState extends State<HadithScreen> {
                 ),
                 Text(
                   isKurmanji
-                      ? '100 فەرموودەیێن صەحیح ل سەر ئیمان و ژیانێ'
+                      ? '200 فەرموودەیێن صەحیح ل سەر ئیمان و ژیانێ'
                       : (isKurdish
-                          ? '100 فەرموودەی صەحیح و پەسەند لە بارەی ژیان و ئیمان'
+                          ? '200 فەرموودەی صەحیح و پەسەند لە بارەی ژیان و ئیمان'
                           : (isArabic
-                              ? '100 حديث نبوي صحيح في شتى أبواب الخير'
-                              : '100 authentic hadiths on faith & life')),
+                              ? '200 حديث نبوي صحيح في شتى أبواب الخير'
+                              : '200 authentic hadiths on faith & life')),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: isKurdishAny
@@ -772,10 +772,11 @@ class _HadithScreenState extends State<HadithScreen> {
               '«${hadith.textAr}»',
               textDirection: TextDirection.rtl,
               textAlign: TextAlign.right,
-              style: AppTheme.arabicTitle(
-                fontSize: 17,
-                color: const Color(0xFFFFFBEB),
-                height: 1.75,
+              style: AppTheme.zikrText(
+                fontSize: 21,
+                fontWeight: FontWeight.w500,
+                color: AppColors.cream,
+                height: 1.95,
               ),
             ),
             if (hadith.textKu.isNotEmpty) ...[

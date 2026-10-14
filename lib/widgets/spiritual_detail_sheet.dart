@@ -263,13 +263,13 @@ class _SpiritualDetailSheetState extends State<SpiritualDetailSheet> {
                     style: widget.isAyah
                         ? AppTheme.quranAyahText(
                             fontSize: 25,
-                            color: const Color(0xFFFFFBEB),
+                            color: AppColors.cream,
                             height: 2.05,
                           )
-                        : GoogleFonts.scheherazadeNew(
+                        : AppTheme.zikrText(
                             fontSize: 24,
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFFFFFBEB),
+                            color: AppColors.cream,
                             height: 2.0,
                           ),
                   ),

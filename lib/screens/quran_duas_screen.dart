@@ -842,9 +842,9 @@ class _QuranDuasScreenState extends State<QuranDuasScreen> {
               textDirection: TextDirection.rtl,
               textAlign: TextAlign.right,
               style: AppTheme.quranAyahText(
-                color: const Color(0xFFFFFBEB),
-                fontSize: 19,
-                height: 1.9,
+                color: AppColors.cream,
+                fontSize: 21,
+                height: 1.95,
               ),
             ),
             if (dua.kurdishMeaning.isNotEmpty) ...[
