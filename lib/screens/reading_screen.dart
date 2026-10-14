@@ -173,7 +173,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
     final loc = AppLocalizations.of(context);
     final lang = loc?.locale.languageCode ?? 'ku';
     final isKurmanji = lang == 'kmr';
-    final isKurdish = lang == 'ku';
+    final isKurdish = lang == 'ku' || isKurmanji;
     final isArabic = lang == 'ar';
 
     if (_completed) {

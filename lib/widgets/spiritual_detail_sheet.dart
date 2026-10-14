@@ -128,9 +128,9 @@ class _SpiritualDetailSheetState extends State<SpiritualDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final isKurmanji = widget.lang == 'kmr';
-    final isKurdish = widget.lang == 'ku';
+    final isKurdish = widget.lang == 'ku' || isKurmanji;
     final isArabic = widget.lang == 'ar';
-    final isKurdishAny = isKurmanji || isKurdish;
+    final isKurdishAny = isKurdish;
 
     return Container(
       constraints: BoxConstraints(

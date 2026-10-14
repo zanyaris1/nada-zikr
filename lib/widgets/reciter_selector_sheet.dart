@@ -69,7 +69,7 @@ class _ReciterSelectorSheetState extends State<ReciterSelectorSheet> {
     final loc = AppLocalizations.of(context);
     final lang = loc?.locale.languageCode ?? 'ku';
     final isKurmanji = lang == 'kmr';
-    final isKurdish = lang == 'ku';
+    final isKurdish = lang == 'ku' || isKurmanji;
     final isKurdishAny = isKurmanji || isKurdish;
     final isRTL = lang == 'ar' || lang == 'ku' || lang == 'kmr';
     final currentReciter = QuranAudioService.instance.selectedReciter;

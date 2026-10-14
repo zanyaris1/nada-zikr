@@ -129,7 +129,7 @@ class _HadithScreenState extends State<HadithScreen> {
     final loc = AppLocalizations.of(context);
     final lang = loc?.locale.languageCode ?? AppLocalizations.languageCode;
     final isKurmanji = lang == 'kmr';
-    final isKurdish = lang == 'ku';
+    final isKurdish = lang == 'ku' || isKurmanji;
     final isArabic = lang == 'ar';
 
     return Scaffold(

@@ -93,7 +93,7 @@ class _FocusedReadingSheetState extends State<FocusedReadingSheet> {
   @override
   Widget build(BuildContext context) {
     final isKurmanji = widget.lang == 'kmr';
-    final isKurdish = widget.lang == 'ku';
+    final isKurdish = widget.lang == 'ku' || isKurmanji;
     final isEnglish = widget.lang == 'en';
     final hasTranslation =
         widget.kurdishMeaning.isNotEmpty || widget.englishMeaning.isNotEmpty;

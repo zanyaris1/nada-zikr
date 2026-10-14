@@ -95,9 +95,9 @@ class SpiritualContentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isKurmanji = lang == 'kmr';
-    final isKurdish = lang == 'ku';
+    final isKurdish = lang == 'ku' || isKurmanji;
     final isArabic = lang == 'ar';
-    final isKurdishAny = isKurmanji || isKurdish;
+    final isKurdishAny = isKurdish;
     final hasKurdish = kurdishMeaning.trim().isNotEmpty;
     final hasEnglish = englishMeaning.trim().isNotEmpty;
     final hasBoth = hasKurdish && hasEnglish;

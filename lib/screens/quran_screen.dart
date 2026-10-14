@@ -68,11 +68,11 @@ class _QuranScreenState extends State<QuranScreen> {
 
         final surahNum = lastRead['surahNumber'] ?? 1;
         final ayahNum = lastRead['ayahNumber'] as int?;
-        final name = isRtl
-            ? (language == 'ku'
-                ? lastRead['surahNameKu']
-                : lastRead['surahNameAr'])
-            : lastRead['surahNameEn'];
+        final name = (language == 'ku' || language == 'kmr')
+            ? lastRead['surahNameKu']
+            : language == 'ar'
+                ? lastRead['surahNameAr']
+                : lastRead['surahNameEn'];
 
         return Container(
           margin: const EdgeInsets.fromLTRB(20, 8, 20, 4),
@@ -123,20 +123,24 @@ class _QuranScreenState extends State<QuranScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                            language == 'ku'
-                              ? 'بەردەوامبە لە خوێندنەوە'
-                              : language == 'ar'
-                                ? 'متابعة القراءة'
-                                : 'Resume Reading',
+                            language == 'kmr'
+                              ? 'بەردەوامێ ل خاندنێ'
+                              : (language == 'ku'
+                                ? 'بەردەوامبە لە خوێندنەوە'
+                                : (language == 'ar'
+                                  ? 'متابعة القراءة'
+                                  : 'Resume Reading')),
                           style: AppTheme.labelText(color: AppColors.gold),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                            '$name (${language == 'ku'
-                              ? 'سۆرەتی'
-                              : language == 'ar'
-                                ? 'السورة'
-                                : 'Surah'} $surahNum)',
+                            '$name (${language == 'kmr'
+                              ? 'سوورەت'
+                              : (language == 'ku'
+                                ? 'سۆرەتی'
+                                : (language == 'ar'
+                                  ? 'السورة'
+                                  : 'Surah'))} $surahNum)',
                           style: isRtl
                               ? AppTheme.kurdishText(
                                   fontSize: 14,
@@ -589,7 +593,7 @@ class _QuranScreenState extends State<QuranScreen> {
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
     final language = loc?.locale.languageCode ?? 'ku';
-    final isRtl = language == 'ku' || language == 'ar';
+    final isRtl = language == 'ku' || language == 'ar' || language == 'kmr';
 
     return Scaffold(
       backgroundColor: AppColors.darkBg,
@@ -635,11 +639,13 @@ class _QuranScreenState extends State<QuranScreen> {
                     // Reciter Selector Icon Button
                     IconButton(
                       onPressed: () => ReciterSelectorSheet.show(context),
-                      tooltip: language == 'ku'
-                          ? 'خوێنەرانی قورئان'
-                          : language == 'ar'
-                              ? 'قرّاء القرآن'
-                              : 'Reciters',
+                      tooltip: language == 'kmr'
+                          ? 'خاندەڤانێن قورئانێ'
+                          : (language == 'ku'
+                              ? 'خوێنەرانی قورئان'
+                              : (language == 'ar'
+                                  ? 'قرّاء القرآن'
+                                  : 'Reciters')),
                       icon: Icon(Icons.record_voice_over_rounded,
                           color: AppColors.gold, size: 22),
                     ),
@@ -673,11 +679,13 @@ class _QuranScreenState extends State<QuranScreen> {
                                   contentPadding:
                                       const EdgeInsets.symmetric(vertical: 12),
                                   hintText: loc?.translate('searchSurah') ??
-                                      (language == 'ku'
-                                          ? 'گەڕان بۆ سوورەت...'
-                                          : language == 'ar'
-                                              ? 'بحث عن سورة...'
-                                              : 'Search surah...'),
+                                      (language == 'kmr'
+                                          ? 'گەڕانا سوورەتێ...'
+                                          : (language == 'ku'
+                                              ? 'گەڕان بۆ سوورەت...'
+                                              : (language == 'ar'
+                                                  ? 'بحث عن سورة...'
+                                                  : 'Search surah...'))),
                                   hintStyle: isRtl
                                       ? AppTheme.kurdishText(
                                           fontSize: 13, color: AppColors.faintText)
@@ -751,8 +759,9 @@ class _SurahTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
     final language = loc?.locale.languageCode ?? 'ku';
-    final isRtl = language == 'ku' || language == 'ar';
-    final name = language == 'ku'
+    final isKurmanji = language == 'kmr';
+    final isRtl = language == 'ku' || language == 'ar' || isKurmanji;
+    final name = (language == 'ku' || isKurmanji)
         ? surah.kurdishName
         : language == 'ar'
             ? surah.arabicName
@@ -761,11 +770,13 @@ class _SurahTile extends StatelessWidget {
     final pageRange = surah.startPage == surah.endPage
         ? '${surah.startPage}'
         : '${surah.startPage} - ${surah.endPage}';
-    final pageLabel = language == 'ku'
-        ? 'لاپەڕە $pageRange'
-        : language == 'ar'
-            ? 'صـ $pageRange'
-            : 'p. $pageRange';
+    final pageLabel = isKurmanji
+        ? 'ل پەڕەیا $pageRange'
+        : (language == 'ku'
+            ? 'لاپەڕە $pageRange'
+            : (language == 'ar'
+                ? 'صـ $pageRange'
+                : 'p. $pageRange'));
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -827,11 +838,13 @@ class _SurahTile extends StatelessWidget {
                       runSpacing: 2,
                       children: [
                         Text(
-                          language == 'ku'
-                              ? '${loc?.translate('ayahs') ?? 'ئایەت'}: ${surah.numberOfAyahs} · $pageLabel'
-                              : language == 'ar'
-                                  ? '${surah.numberOfAyahs} ${loc?.translate('ayahs') ?? 'آيات'} · $pageLabel'
-                                  : '${surah.englishName} · ${surah.numberOfAyahs} ${loc?.translate('ayahs') ?? 'ayahs'} · $pageLabel',
+                          isKurmanji
+                              ? '${surah.numberOfAyahs} ئایەت · $pageLabel'
+                              : (language == 'ku'
+                                  ? '${loc?.translate('ayahs') ?? 'ئایەت'}: ${surah.numberOfAyahs} · $pageLabel'
+                                  : (language == 'ar'
+                                      ? '${surah.numberOfAyahs} ${loc?.translate('ayahs') ?? 'آيات'} · $pageLabel'
+                                      : '${surah.englishName} · ${surah.numberOfAyahs} ${loc?.translate('ayahs') ?? 'ayahs'} · $pageLabel')),
                           textDirection:
                               isRtl ? TextDirection.rtl : TextDirection.ltr,
                           style: isRtl
@@ -1196,7 +1209,7 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
             !QuranAudioService.instance.player.playing)) {
       final loc = AppLocalizations.of(context);
       final lang = loc?.locale.languageCode ?? 'ku';
-      final surahName = lang == 'ku'
+      final surahName = (lang == 'ku' || lang == 'kmr')
           ? widget.surah.kurdishName
           : (lang == 'ar' ? widget.surah.arabicName : widget.surah.englishName);
       QuranAudioService.instance.playSurah(
@@ -1707,16 +1720,20 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
             Expanded(
               child: Text(
                 hasExact
-                    ? (lang == 'ku'
-                        ? 'گوێگرتن لە ئایەت ${ayah.ayah}'
-                        : lang == 'ar'
-                            ? 'الاستماع من الآية ${ayah.ayah}'
-                            : 'Playing from Ayah ${ayah.ayah}')
-                    : (lang == 'ku'
-                        ? 'پەخشکردنی دەنگی سوورەتەکە'
-                        : lang == 'ar'
-                            ? 'تشغيل صوت السورة كاملة'
-                            : 'Playing Surah audio'),
+                    ? (lang == 'kmr'
+                        ? 'گوهداریکرن ژ ئایەتا ${ayah.ayah}'
+                        : lang == 'ku'
+                            ? 'گوێگرتن لە ئایەت ${ayah.ayah}'
+                            : lang == 'ar'
+                                ? 'الاستماع من الآية ${ayah.ayah}'
+                                : 'Playing from Ayah ${ayah.ayah}')
+                    : (lang == 'kmr'
+                        ? 'پەخشکرنا دەنگێ سورەتێ ب تەمامی'
+                        : lang == 'ku'
+                            ? 'پەخشکردنی دەنگی سوورەتەکە'
+                            : lang == 'ar'
+                                ? 'تشغيل صوت السورة كاملة'
+                                : 'Playing Surah audio'),
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -1771,16 +1788,20 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
   }
 
   Widget _buildPageMarker(int page, int juz, String language, bool isRtl) {
-    final pageLabel = language == 'ku'
-        ? 'لاپەڕە $page'
-        : language == 'ar'
-            ? 'صفحة $page'
-            : 'Page $page';
-    final juzLabel = language == 'ku'
-        ? 'جوزء $juz'
-        : language == 'ar'
-            ? 'الجزء $juz'
-            : 'Juz $juz';
+    final pageLabel = language == 'kmr'
+        ? 'بەرپەر $page'
+        : language == 'ku'
+            ? 'لاپەڕە $page'
+            : language == 'ar'
+                ? 'صفحة $page'
+                : 'Page $page';
+    final juzLabel = language == 'kmr'
+        ? 'پشک $juz'
+        : language == 'ku'
+            ? 'جوزء $juz'
+            : language == 'ar'
+                ? 'الجزء $juz'
+                : 'Juz $juz';
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1911,11 +1932,13 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                             border: InputBorder.none,
                             isDense: true,
                             contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                            hintText: language == 'ku'
-                                ? 'ئایەت (١ - ${activeAyahs.length}) یان لاپەڕە'
-                                : language == 'ar'
-                                    ? 'الآية (١ - ${activeAyahs.length}) أو الصفحة'
-                                    : 'Ayah (1 - ${activeAyahs.length}) or Page',
+                            hintText: language == 'kmr'
+                                ? 'ئایەت (١ - ${activeAyahs.length}) یان بەرپەر'
+                                : language == 'ku'
+                                    ? 'ئایەت (١ - ${activeAyahs.length}) یان لاپەڕە'
+                                    : language == 'ar'
+                                        ? 'الآية (١ - ${activeAyahs.length}) أو الصفحة'
+                                        : 'Ayah (1 - ${activeAyahs.length}) or Page',
                             hintStyle: isRtl
                                 ? AppTheme.kurdishText(
                                     fontSize: 12, color: AppColors.faintText)
@@ -1959,11 +1982,13 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: Text(
-                  language == 'ku'
-                      ? 'بڕۆ'
-                      : language == 'ar'
-                          ? 'انتقال'
-                          : 'Go',
+                  language == 'kmr'
+                      ? 'هەڕە'
+                      : language == 'ku'
+                          ? 'بڕۆ'
+                          : language == 'ar'
+                              ? 'انتقال'
+                              : 'Go',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                 ),
               ),
@@ -1998,11 +2023,13 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              language == 'ku'
-                                  ? 'ئایەت ${matchedAyah.ayah} · لاپەڕە ${matchedAyah.page}'
-                                  : language == 'ar'
-                                      ? 'الآية ${matchedAyah.ayah} · صفحة ${matchedAyah.page}'
-                                      : 'Ayah ${matchedAyah.ayah} · Page ${matchedAyah.page}',
+                              language == 'kmr'
+                                  ? 'ئایەتا ${matchedAyah.ayah} · بەرپەرێ ${matchedAyah.page}'
+                                  : language == 'ku'
+                                      ? 'ئایەت ${matchedAyah.ayah} · لاپەڕە ${matchedAyah.page}'
+                                      : language == 'ar'
+                                          ? 'الآية ${matchedAyah.ayah} · صفحة ${matchedAyah.page}'
+                                          : 'Ayah ${matchedAyah.ayah} · Page ${matchedAyah.page}',
                               style: TextStyle(
                                 color: AppColors.gold,
                                 fontWeight: FontWeight.bold,
@@ -2043,11 +2070,13 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            language == 'ku'
-                                ? 'سەرەتای لاپەڕەی $parsedNumber (ئایەت ${matchedPageAyah.ayah})'
-                                : language == 'ar'
-                                    ? 'بداية الصفحة $parsedNumber (الآية ${matchedPageAyah.ayah})'
-                                    : 'Start of Page $parsedNumber (Ayah ${matchedPageAyah.ayah})',
+                            language == 'kmr'
+                                ? 'دەستپێکا بەرپەرێ $parsedNumber (ئایەتا ${matchedPageAyah.ayah})'
+                                : language == 'ku'
+                                    ? 'سەرەتای لاپەڕەی $parsedNumber (ئایەت ${matchedPageAyah.ayah})'
+                                    : language == 'ar'
+                                        ? 'بداية الصفحة $parsedNumber (الآية ${matchedPageAyah.ayah})'
+                                        : 'Start of Page $parsedNumber (Ayah ${matchedPageAyah.ayah})',
                             style: AppTheme.englishText(fontSize: 12, color: AppColors.cream),
                           ),
                         ),
@@ -2105,7 +2134,7 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              language == 'ku' ? 'پـ ${item.page}' : language == 'ar' ? 'صـ ${item.page}' : 'p. ${item.page}',
+                              language == 'kmr' ? 'بـ ${item.page}' : language == 'ku' ? 'پـ ${item.page}' : language == 'ar' ? 'صـ ${item.page}' : 'p. ${item.page}',
                               style: TextStyle(fontSize: 10, color: AppColors.faintText),
                             ),
                           ],
@@ -2124,7 +2153,7 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
             child: Row(
               children: [
                 Text(
-                  language == 'ku' ? 'ئایەت:' : language == 'ar' ? 'آية:' : 'Ayah:',
+                  language == 'kmr' ? 'ئایەت:' : language == 'ku' ? 'ئایەت:' : language == 'ar' ? 'آية:' : 'Ayah:',
                   style: TextStyle(fontSize: 11, color: AppColors.mutedText),
                 ),
                 const SizedBox(width: 6),
@@ -2157,7 +2186,7 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                 if (activeSurah.startPage != activeSurah.endPage) ...[
                   const SizedBox(width: 6),
                   Text(
-                    language == 'ku' ? 'پەڕە:' : language == 'ar' ? 'صفحة:' : 'Page:',
+                    language == 'kmr' ? 'بەرپەر:' : language == 'ku' ? 'پەڕە:' : language == 'ar' ? 'صفحة:' : 'Page:',
                     style: TextStyle(fontSize: 11, color: AppColors.mutedText),
                   ),
                   const SizedBox(width: 6),
@@ -2544,8 +2573,8 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
     final activeSurah = _activeSurah;
     final loc = AppLocalizations.of(context);
     final language = loc?.locale.languageCode ?? 'ku';
-    final isRtl = language == 'ku' || language == 'ar';
-    final name = language == 'ku'
+    final isRtl = language == 'ku' || language == 'kmr' || language == 'ar';
+    final name = (language == 'ku' || language == 'kmr')
         ? activeSurah.kurdishName
         : language == 'ar'
             ? activeSurah.arabicName
@@ -2554,11 +2583,13 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
     final pageRange = activeSurah.startPage == activeSurah.endPage
         ? '${activeSurah.startPage}'
         : '${activeSurah.startPage} - ${activeSurah.endPage}';
-    final pageLabel = language == 'ku'
-        ? 'لاپەڕە $pageRange'
-        : language == 'ar'
-            ? 'صـ $pageRange'
-            : 'p. $pageRange';
+    final pageLabel = language == 'kmr'
+        ? 'بەرپەر $pageRange'
+        : language == 'ku'
+            ? 'لاپەڕە $pageRange'
+            : language == 'ar'
+                ? 'صـ $pageRange'
+                : 'p. $pageRange';
 
     return Scaffold(
       backgroundColor: AppColors.darkBg,
@@ -2613,8 +2644,8 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                                     fontSize: 18, color: AppColors.gold),
                           ),
                           Text(
-                            language == 'ku'
-                                ? '${loc?.translate('surah') ?? 'سورەت'} ${activeSurah.number} · $pageLabel'
+                            (language == 'ku' || language == 'kmr')
+                                ? '${loc?.translate('surah') ?? (language == 'kmr' ? 'سورەتا' : 'سورەت')} ${activeSurah.number} · $pageLabel'
                                 : language == 'ar'
                                     ? '${loc?.translate('surah') ?? 'السورة'} ${activeSurah.number} · $pageLabel'
                                     : '${loc?.translate('surah') ?? 'Surah'} ${activeSurah.number} · $pageLabel · ${activeSurah.englishName}',
@@ -2676,7 +2707,9 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      language == 'ku'
+                                      language == 'kmr'
+                                          ? 'گەڕیان'
+                                          : language == 'ku'
                                           ? 'گەڕان'
                                           : language == 'ar'
                                               ? 'بحث'
@@ -2740,7 +2773,9 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      language == 'ku'
+                                      language == 'kmr'
+                                          ? 'گوهداریکرن'
+                                          : language == 'ku'
                                           ? 'گوێگرتن'
                                           : language == 'ar'
                                               ? 'استماع'
@@ -2758,11 +2793,13 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                               ),
                             ),
                             PopupMenuButton<String>(
-                              tooltip: language == 'ku'
-                                  ? 'شێوازی خوێندنەوە'
-                                  : language == 'ar'
-                                      ? 'نمط القراءة'
-                                      : 'Reading layout',
+                              tooltip: language == 'kmr'
+                                  ? 'شێوازێ خواندنێ'
+                                  : language == 'ku'
+                                      ? 'شێوازی خوێندنەوە'
+                                      : language == 'ar'
+                                          ? 'نمط القراءة'
+                                          : 'Reading layout',
                               icon: Icon(Icons.view_agenda_outlined,
                                   color: AppColors.gold, size: 20),
                               color: AppColors.darkPanel,
@@ -2771,7 +2808,9 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                                 PopupMenuItem(
                                   value: 'book',
                                   child: Text(
-                                    language == 'ku'
+                                    language == 'kmr'
+                                        ? 'شێوازێ پەڕتووکێ'
+                                        : language == 'ku'
                                         ? 'شێوازی کتێب'
                                         : language == 'ar'
                                             ? 'نمط المصحف'
@@ -2786,7 +2825,9 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                                 PopupMenuItem(
                                   value: 'list',
                                   child: Text(
-                                    language == 'ku'
+                                    language == 'kmr'
+                                        ? 'ئایەت ب ئایەت'
+                                        : language == 'ku'
                                         ? 'ئایەت بە ئایەت'
                                         : language == 'ar'
                                             ? 'آية بعد آية'
@@ -2801,11 +2842,13 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                               ],
                             ),
                             PopupMenuButton<double>(
-                              tooltip: language == 'ku'
-                                  ? 'قەبارەی دەقی قورئان'
-                                  : language == 'ar'
-                                      ? 'حجم نص القرآن'
-                                      : 'Quran text size',
+                              tooltip: language == 'kmr'
+                                  ? 'قەبارێ دەقێ قورئانێ'
+                                  : language == 'ku'
+                                      ? 'قەبارەی دەقی قورئان'
+                                      : language == 'ar'
+                                          ? 'حجم نص القرآن'
+                                          : 'Quran text size',
                               icon: Icon(Icons.format_size_rounded,
                                   color: AppColors.gold, size: 20),
                               color: AppColors.darkPanel,
@@ -2879,11 +2922,13 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            language == 'ku'
-                                ? 'بەردەوامبوونەوەی گوێگرتن'
-                                : language == 'ar'
-                                    ? 'استأنف الاستماع'
-                                    : 'Resume Listening',
+                            language == 'kmr'
+                                ? 'بەردەوامبوونا گوهداریکرنێ'
+                                : language == 'ku'
+                                    ? 'بەردەوامبوونەوەی گوێگرتن'
+                                    : language == 'ar'
+                                        ? 'استأنف الاستماع'
+                                        : 'Resume Listening',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: isRtl
@@ -3324,8 +3369,9 @@ class _TafsirSheetState extends State<_TafsirSheet> {
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
     final language = loc?.locale.languageCode ?? 'ku';
-    final isRtl = language == 'ku' || language == 'ar';
-    String localized(String kurdish, String arabic, String english) {
+    final isRtl = language == 'ku' || language == 'kmr' || language == 'ar';
+    String localized(String kurdish, String arabic, String english, [String? kurmanji]) {
+      if (language == 'kmr') return kurmanji ?? kurdish;
       return language == 'ku' ? kurdish : language == 'ar' ? arabic : english;
     }
 
@@ -3373,8 +3419,8 @@ class _TafsirSheetState extends State<_TafsirSheet> {
                   ),
                   Expanded(
                     child: Text(
-                      language == 'ku'
-                          ? '${loc?.translate('surah') ?? 'سورەت'} ${widget.surahNumber} · ${loc?.translate('ayah') ?? 'ئایەت'} ${_currentAyah.ayah} · لاپەڕە ${_currentAyah.page}'
+                      (language == 'ku' || language == 'kmr')
+                          ? '${loc?.translate('surah') ?? (language == 'kmr' ? 'سورەتا' : 'سورەت')} ${widget.surahNumber} · ${loc?.translate('ayah') ?? (language == 'kmr' ? 'ئایەتا' : 'ئایەت')} ${_currentAyah.ayah} · ${language == 'kmr' ? 'بەرپەرێ' : 'لاپەڕە'} ${_currentAyah.page}'
                           : language == 'ar'
                               ? '${loc?.translate('surah') ?? 'السورة'} ${widget.surahNumber} · ${loc?.translate('ayah') ?? 'الآية'} ${_currentAyah.ayah} · صفحة ${_currentAyah.page}'
                               : '${loc?.translate('surah') ?? 'Surah'} ${widget.surahNumber} · ${loc?.translate('ayah') ?? 'Ayah'} ${_currentAyah.ayah} · Page ${_currentAyah.page}',
