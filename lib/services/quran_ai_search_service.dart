@@ -62,10 +62,9 @@ class QuranAiSearchService {
   QuranAiSearchService._();
   static final QuranAiSearchService instance = QuranAiSearchService._();
 
-  // Gemini API key from https://aistudio.google.com/app/apikey
-  // Both 'AIza...' (old) and 'AQ.Ab...' (new, since May 2026) formats are valid.
-  // Keys expire after 24h if not linked to a Cloud project — get a fresh one if searches fail.
-  static const String _geminiApiKey = 'AQ.Ab8RN6JRCHLNoxk9d03pArEBJFxss8BQrCudS1-ocMR5U-Jdww';
+  // Gemini API key: pass at compile-time via --dart-define=GEMINI_API_KEY=your_key
+  // or leave empty to use built-in offline semantic search.
+  static const String _geminiApiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
 
   /// In-memory cache for fast instant query results
   final Map<String, QuranAiSearchResponse> _cache = {};
