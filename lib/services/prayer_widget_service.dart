@@ -42,16 +42,17 @@ class PrayerWidgetService {
   /// Helper: save a string value.
   static Future<void> _save(String key, String value) async {
     try {
-      await HomeWidget.saveWidgetData<String>(key, value);
+      await HomeWidget.saveWidgetData<String>(key, value, appGroupId: appGroupId);
     } catch (e) {
       debugPrint('PrayerWidgetService save($key) error: $e');
     }
   }
 
-  /// Helper: save a double value.
+  /// Helper: save a double value (both as double and string for universal native compatibility).
   static Future<void> _saveDouble(String key, double value) async {
     try {
-      await HomeWidget.saveWidgetData<double>(key, value);
+      await HomeWidget.saveWidgetData<double>(key, value, appGroupId: appGroupId);
+      await HomeWidget.saveWidgetData<String>('${key}_str', value.toString(), appGroupId: appGroupId);
     } catch (e) {
       debugPrint('PrayerWidgetService saveDouble($key) error: $e');
     }
@@ -248,6 +249,14 @@ class PrayerWidgetService {
       final lng = (schedule['longitude'] as num?)?.toDouble() ?? 44.0092;
       await _saveDouble('city_lat', lat);
       await _saveDouble('city_lng', lng);
+
+      final currentCity = schedule['city'] as WorldCity?;
+      if (currentCity != null) {
+        await _save('city_id', currentCity.id);
+        if (currentCity.datasetKey != null) {
+          await _save('city_dataset_key', currentCity.datasetKey!);
+        }
+      }
 
       await _saveDouble('prayer_progress', prayerProgress);
       await _save('city_name', cityName);

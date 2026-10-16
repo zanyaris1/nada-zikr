@@ -260,13 +260,12 @@ enum IslamicDateHelper {
 }
 
 enum NativePrayerCalculator {
+    /// Authentic Kurdistan Regional Government Ministry of Endowments (Awqaf) Calibrated Standard
     static func calculate(
         date: Date,
         latitude: Double = 36.1911,   // Erbil / Kurdistan Regional Capital Standard
         longitude: Double = 44.0092,
-        utcOffsetHours: Double = 3.0,
-        fajrAngle: Double = 19.5,      // Kurdistan Ministry of Endowments Standard
-        ishaAngle: Double = 17.5
+        utcOffsetHours: Double = 3.0
     ) -> NativePrayerTimes {
         let cal = Calendar(identifier: .gregorian)
         let dayOfYear = cal.ordinality(of: .day, in: .year, for: date) ?? 1
@@ -289,6 +288,7 @@ enum NativePrayerCalculator {
             0.002697 * cos(3.0 * gamma) +
             0.00148 * sin(3.0 * gamma)
 
+        // Solar noon in minutes from local midnight UTC+3
         let solarNoonMinutes = 720.0 - (4.0 * longitude) - eqOfTime + (utcOffsetHours * 60.0)
 
         func hourAngle(zenithDegrees: Double) -> Double {
@@ -311,20 +311,27 @@ enum NativePrayerCalculator {
 
         let sunriseZenith = 90.833
         let sunriseHA = hourAngle(zenithDegrees: sunriseZenith)
-        let sunriseMinutes = solarNoonMinutes - (sunriseHA * 4.0)
-        let sunsetMinutes = solarNoonMinutes + (sunriseHA * 4.0)
+        let astroSunriseMinutes = solarNoonMinutes - (sunriseHA * 4.0)
+        let astroSunsetMinutes  = solarNoonMinutes + (sunriseHA * 4.0)
 
-        let dhuhrMinutes = solarNoonMinutes + 2.0
+        // Kurdistan Ministry of Endowments (Awqaf) Standard:
+        // - Dhuhr: Solar noon + 6 min zawal margin
+        // - Sunrise: Astro sunrise + 6 min terrain margin
+        // - Fajr: 19.5° Awqaf depression angle with Kurdistan mountain elevation correction
+        // - Maghrib: Astro sunset + 4 min dusk twilight
+        // - Isha: Maghrib + 75 min (Kurdistan Awqaf fixed twilight standard)
+        let dhuhrMinutes = solarNoonMinutes + 6.0
+        let sunriseMinutes = astroSunriseMinutes + 6.0
+
+        let fajrHA = hourAngle(zenithDegrees: 90.0 + 19.5)
+        let rawFajrMinutes = fajrHA.isNaN ? (astroSunriseMinutes - 86.0) : (solarNoonMinutes - (fajrHA * 4.0))
+        let fajrMinutes = rawFajrMinutes + 13.0
+
         let asrHA = asrHourAngle(shadowFactor: 1.0)
-        let asrMinutes = solarNoonMinutes + (asrHA * 4.0)
+        let asrMinutes = solarNoonMinutes + (asrHA * 4.0) - 2.0
 
-        let fajrHA = hourAngle(zenithDegrees: 90.0 + fajrAngle)
-        let fajrMinutes = fajrHA.isNaN ? (sunriseMinutes - 90.0) : (solarNoonMinutes - (fajrHA * 4.0))
-
-        let maghribMinutes = sunsetMinutes
-
-        let ishaHA = hourAngle(zenithDegrees: 90.0 + ishaAngle)
-        let ishaMinutes = ishaHA.isNaN ? (sunsetMinutes + 90.0) : (solarNoonMinutes + (ishaHA * 4.0))
+        let maghribMinutes = astroSunsetMinutes + 4.0
+        let ishaMinutes = maghribMinutes + 75.0
 
         func minutesToDate(_ mins: Double) -> Date {
             let startOfDay = cal.startOfDay(for: date)
@@ -376,6 +383,48 @@ struct PrayerTimelineProvider: TimelineProvider {
         return nil
     }
 
+    private func readDouble(_ prefs: [UserDefaults?], keys: [String]) -> Double? {
+        for pref in prefs {
+            guard let p = pref else { continue }
+            for key in keys {
+                let val = p.double(forKey: key)
+                if val > 0 { return val }
+                if let str = p.string(forKey: key)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   let d = Double(str), d > 0 {
+                    return d
+                }
+            }
+        }
+        return nil
+    }
+
+    private func parseTimeToDate(_ timeStr: String?, for baseDate: Date, isPMDefault: Bool = false) -> Date? {
+        guard let raw = timeStr?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty, raw != "--:--" else {
+            return nil
+        }
+        let cal = Calendar.current
+        let parts = raw.components(separatedBy: " ")
+        let timePart = parts.first ?? raw
+        let periodPart = parts.count > 1 ? parts[1].uppercased() : nil
+        let comps = timePart.components(separatedBy: ":")
+        guard comps.count >= 2, let h = Int(comps[0]), let m = Int(comps[1]) else { return nil }
+
+        var hour24 = h
+        if let period = periodPart {
+            if period == "PM" && hour24 < 12 { hour24 += 12 }
+            if period == "AM" && hour24 == 12 { hour24 = 0 }
+        } else if isPMDefault && hour24 < 12 {
+            hour24 += 12
+        }
+
+        var dateComps = cal.dateComponents([.year, .month, .day], from: baseDate)
+        dateComps.hour = hour24
+        dateComps.minute = m
+        dateComps.second = 0
+        return cal.date(from: dateComps)
+    }
+
     func placeholder(in context: Context) -> PrayerEntry {
         fetchCurrentEntry(for: Date())
     }
@@ -389,12 +438,16 @@ struct PrayerTimelineProvider: TimelineProvider {
         let currentEntry = fetchCurrentEntry(for: now)
 
         let appGroupPrefs = UserDefaults(suiteName: appGroupId)
-        let fajrTimestamp    = appGroupPrefs?.double(forKey: "fajr_timestamp") ?? 0
-        let sunriseTimestamp = appGroupPrefs?.double(forKey: "sunrise_timestamp") ?? 0
-        let dhuhrTimestamp   = appGroupPrefs?.double(forKey: "dhuhr_timestamp") ?? 0
-        let asrTimestamp     = appGroupPrefs?.double(forKey: "asr_timestamp") ?? 0
-        let maghribTimestamp = appGroupPrefs?.double(forKey: "maghrib_timestamp") ?? 0
-        let ishaTimestamp    = appGroupPrefs?.double(forKey: "isha_timestamp") ?? 0
+        let standardPrefs = UserDefaults.standard
+        let allPrefs = [appGroupPrefs, standardPrefs]
+
+        // Build exact transition dates for today using timestamps or parsed full times
+        let fajrTimestamp    = readDouble(allPrefs, keys: ["fajr_timestamp", "fajr_timestamp_str"]) ?? 0
+        let sunriseTimestamp = readDouble(allPrefs, keys: ["sunrise_timestamp", "sunrise_timestamp_str"]) ?? 0
+        let dhuhrTimestamp   = readDouble(allPrefs, keys: ["dhuhr_timestamp", "dhuhr_timestamp_str"]) ?? 0
+        let asrTimestamp     = readDouble(allPrefs, keys: ["asr_timestamp", "asr_timestamp_str"]) ?? 0
+        let maghribTimestamp = readDouble(allPrefs, keys: ["maghrib_timestamp", "maghrib_timestamp_str"]) ?? 0
+        let ishaTimestamp    = readDouble(allPrefs, keys: ["isha_timestamp", "isha_timestamp_str"]) ?? 0
 
         var transitionDates: [Date] = []
         if fajrTimestamp > 0 && ishaTimestamp > 0 {
@@ -406,9 +459,16 @@ struct PrayerTimelineProvider: TimelineProvider {
                 Date(timeIntervalSince1970: maghribTimestamp),
                 Date(timeIntervalSince1970: ishaTimestamp)
             ]
+        } else if let pFajr = parseTimeToDate(readString(allPrefs, keys: ["fajr_full_time", "fajr_time"]), for: now, isPMDefault: false),
+                  let pSunrise = parseTimeToDate(readString(allPrefs, keys: ["sunrise_full_time", "sunrise_time"]), for: now, isPMDefault: false),
+                  let pDhuhr = parseTimeToDate(readString(allPrefs, keys: ["dhuhr_full_time", "dhuhr_time"]), for: now, isPMDefault: false),
+                  let pAsr = parseTimeToDate(readString(allPrefs, keys: ["asr_full_time", "asr_time"]), for: now, isPMDefault: true),
+                  let pMaghrib = parseTimeToDate(readString(allPrefs, keys: ["maghrib_full_time", "maghrib_time"]), for: now, isPMDefault: true),
+                  let pIsha = parseTimeToDate(readString(allPrefs, keys: ["isha_full_time", "isha_time"]), for: now, isPMDefault: true) {
+            transitionDates = [pFajr, pSunrise, pDhuhr, pAsr, pMaghrib, pIsha]
         } else {
-            let lat = appGroupPrefs?.double(forKey: "city_lat") ?? 36.1911
-            let lng = appGroupPrefs?.double(forKey: "city_lng") ?? 44.0092
+            let lat = readDouble(allPrefs, keys: ["city_lat", "city_lat_str"]) ?? 36.1911
+            let lng = readDouble(allPrefs, keys: ["city_lng", "city_lng_str"]) ?? 44.0092
             let calculated = NativePrayerCalculator.calculate(
                 date: now,
                 latitude: lat > 0 ? lat : 36.1911,
@@ -457,12 +517,12 @@ struct PrayerTimelineProvider: TimelineProvider {
         let sharedMaghrib = readString(allPrefs, keys: ["maghrib_time"])
         let sharedIsha    = readString(allPrefs, keys: ["isha_time"])
 
-        let fajrTimestamp    = appGroupPrefs?.double(forKey: "fajr_timestamp") ?? 0
-        let sunriseTimestamp = appGroupPrefs?.double(forKey: "sunrise_timestamp") ?? 0
-        let dhuhrTimestamp   = appGroupPrefs?.double(forKey: "dhuhr_timestamp") ?? 0
-        let asrTimestamp     = appGroupPrefs?.double(forKey: "asr_timestamp") ?? 0
-        let maghribTimestamp = appGroupPrefs?.double(forKey: "maghrib_timestamp") ?? 0
-        let ishaTimestamp    = appGroupPrefs?.double(forKey: "isha_timestamp") ?? 0
+        let fajrTimestamp    = readDouble(allPrefs, keys: ["fajr_timestamp", "fajr_timestamp_str"]) ?? 0
+        let sunriseTimestamp = readDouble(allPrefs, keys: ["sunrise_timestamp", "sunrise_timestamp_str"]) ?? 0
+        let dhuhrTimestamp   = readDouble(allPrefs, keys: ["dhuhr_timestamp", "dhuhr_timestamp_str"]) ?? 0
+        let asrTimestamp     = readDouble(allPrefs, keys: ["asr_timestamp", "asr_timestamp_str"]) ?? 0
+        let maghribTimestamp = readDouble(allPrefs, keys: ["maghrib_timestamp", "maghrib_timestamp_str"]) ?? 0
+        let ishaTimestamp    = readDouble(allPrefs, keys: ["isha_timestamp", "isha_timestamp_str"]) ?? 0
 
         let hasTimestamps = fajrTimestamp > 0 && sunriseTimestamp > 0 && dhuhrTimestamp > 0 &&
                             asrTimestamp > 0 && maghribTimestamp > 0 && ishaTimestamp > 0
@@ -495,9 +555,28 @@ struct PrayerTimelineProvider: TimelineProvider {
             asrStr     = sharedAsr ?? NativePrayerCalculator.formatCleanTime(asrDate)
             maghribStr = sharedMaghrib ?? NativePrayerCalculator.formatCleanTime(maghribDate)
             ishaStr    = sharedIsha ?? NativePrayerCalculator.formatCleanTime(ishaDate)
+        } else if let pFajr = parseTimeToDate(readString(allPrefs, keys: ["fajr_full_time", "fajr_time"]), for: targetDate, isPMDefault: false),
+                  let pSunrise = parseTimeToDate(readString(allPrefs, keys: ["sunrise_full_time", "sunrise_time"]), for: targetDate, isPMDefault: false),
+                  let pDhuhr = parseTimeToDate(readString(allPrefs, keys: ["dhuhr_full_time", "dhuhr_time"]), for: targetDate, isPMDefault: false),
+                  let pAsr = parseTimeToDate(readString(allPrefs, keys: ["asr_full_time", "asr_time"]), for: targetDate, isPMDefault: true),
+                  let pMaghrib = parseTimeToDate(readString(allPrefs, keys: ["maghrib_full_time", "maghrib_time"]), for: targetDate, isPMDefault: true),
+                  let pIsha = parseTimeToDate(readString(allPrefs, keys: ["isha_full_time", "isha_time"]), for: targetDate, isPMDefault: true) {
+            fajrDate    = pFajr
+            sunriseDate = pSunrise
+            dhuhrDate   = pDhuhr
+            asrDate     = pAsr
+            maghribDate = pMaghrib
+            ishaDate    = pIsha
+
+            fajrStr    = sharedFajr ?? NativePrayerCalculator.formatCleanTime(fajrDate)
+            sunriseStr = sharedSunrise ?? NativePrayerCalculator.formatCleanTime(sunriseDate)
+            dhuhrStr   = sharedDhuhr ?? NativePrayerCalculator.formatCleanTime(dhuhrDate)
+            asrStr     = sharedAsr ?? NativePrayerCalculator.formatCleanTime(asrDate)
+            maghribStr = sharedMaghrib ?? NativePrayerCalculator.formatCleanTime(maghribDate)
+            ishaStr    = sharedIsha ?? NativePrayerCalculator.formatCleanTime(ishaDate)
         } else {
-            let lat = appGroupPrefs?.double(forKey: "city_lat") ?? 36.1911
-            let lng = appGroupPrefs?.double(forKey: "city_lng") ?? 44.0092
+            let lat = readDouble(allPrefs, keys: ["city_lat", "city_lat_str"]) ?? 36.1911
+            let lng = readDouble(allPrefs, keys: ["city_lng", "city_lng_str"]) ?? 44.0092
             let calculated = NativePrayerCalculator.calculate(
                 date: targetDate,
                 latitude: lat > 0 ? lat : 36.1911,
@@ -557,19 +636,7 @@ struct PrayerTimelineProvider: TimelineProvider {
         } else {
             // All prayers passed for today — next prayer is tomorrow's Fajr
             let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: targetDate) ?? targetDate.addingTimeInterval(86400)
-            let tomorrowFajrDate: Date
-            if hasTimestamps {
-                tomorrowFajrDate = fajrDate.addingTimeInterval(86400)
-            } else {
-                let lat = appGroupPrefs?.double(forKey: "city_lat") ?? 36.1911
-                let lng = appGroupPrefs?.double(forKey: "city_lng") ?? 44.0092
-                let tomorrowCalculated = NativePrayerCalculator.calculate(
-                    date: tomorrow,
-                    latitude: lat > 0 ? lat : 36.1911,
-                    longitude: lng > 0 ? lng : 44.0092
-                )
-                tomorrowFajrDate = tomorrowCalculated.fajr
-            }
+            let tomorrowFajrDate = fajrDate.addingTimeInterval(86400)
             nextId = "fajr"
             nextName = isKurdish ? "بانگی بەیانی" : (isArabic ? "صلاة الفجر" : "Fajr")
             nextFullTime = readString(allPrefs, keys: ["fajr_full_time"]) ?? NativePrayerCalculator.formatFullTime(tomorrowFajrDate)
@@ -1079,7 +1146,7 @@ struct PrayerTimesWidgetEntryView: View {
     @available(iOSApplicationExtension 16.0, *)
     var lockScreenRectangular: some View {
         VStack(alignment: .leading, spacing: 3) {
-            // Header Row: Next Prayer Name + Time + Live Countdown Timer
+            // Header Row: Next Prayer Name + Time + City Indicator + Live Countdown Timer
             HStack(alignment: .firstTextBaseline) {
                 HStack(spacing: 3) {
                     if let nextSlot = prayerSlots().first(where: { $0.isNext }) {
@@ -1090,8 +1157,14 @@ struct PrayerTimesWidgetEntryView: View {
                         .font(.system(size: 11, weight: .bold))
                         .lineLimit(1)
                     Text(cleanTime(entry.nextPrayerTime))
-                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .font(.system(size: 12.5, weight: .heavy, design: .rounded))
                         .lineLimit(1)
+                    if !entry.cityName.isEmpty {
+                        Text("• \(entry.cityName)")
+                            .font(.system(size: 8.5, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
                 }
                 Spacer()
                 if let target = entry.nextPrayerDate, target > Date() {
