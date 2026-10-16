@@ -388,35 +388,56 @@ struct PrayerTimelineProvider: TimelineProvider {
         let now = Date()
         let currentEntry = fetchCurrentEntry(for: now)
 
-        // Parse today's prayer dates
-        let timeStrings = [currentEntry.fajr, currentEntry.sunrise, currentEntry.dhuhr, currentEntry.asr, currentEntry.maghrib, currentEntry.isha]
-        let cal = Calendar.current
+        let appGroupPrefs = UserDefaults(suiteName: appGroupId)
+        let fajrTimestamp    = appGroupPrefs?.double(forKey: "fajr_timestamp") ?? 0
+        let sunriseTimestamp = appGroupPrefs?.double(forKey: "sunrise_timestamp") ?? 0
+        let dhuhrTimestamp   = appGroupPrefs?.double(forKey: "dhuhr_timestamp") ?? 0
+        let asrTimestamp     = appGroupPrefs?.double(forKey: "asr_timestamp") ?? 0
+        let maghribTimestamp = appGroupPrefs?.double(forKey: "maghrib_timestamp") ?? 0
+        let ishaTimestamp    = appGroupPrefs?.double(forKey: "isha_timestamp") ?? 0
 
-        var futureDates: [Date] = timeStrings.compactMap { timeStr -> Date? in
-            guard timeStr != "--:--" else { return nil }
-            let parts = timeStr.components(separatedBy: CharacterSet(charactersIn: " :"))
-            guard parts.count >= 2, let h = Int(parts[0]), let m = Int(parts[1]) else { return nil }
-            var hour = h
-            if parts.count >= 3 {
-                let ampm = parts[2].uppercased()
-                if ampm == "PM" && h != 12 { hour = h + 12 }
-                if ampm == "AM" && h == 12 { hour = 0 }
-            }
-            var comps = cal.dateComponents([.year, .month, .day], from: now)
-            comps.hour = hour; comps.minute = m; comps.second = 1
-            return cal.date(from: comps)
-        }.filter { $0 > now }.sorted()
-
-        // Also schedule a fallback refresh every 15 minutes
-        futureDates.append(now.addingTimeInterval(900))
-
-        // Build a dynamic entry for each transition point
-        let entries: [PrayerEntry] = [currentEntry] + futureDates.prefix(6).map { refreshDate in
-            fetchCurrentEntry(for: refreshDate)
+        var transitionDates: [Date] = []
+        if fajrTimestamp > 0 && ishaTimestamp > 0 {
+            transitionDates = [
+                Date(timeIntervalSince1970: fajrTimestamp),
+                Date(timeIntervalSince1970: sunriseTimestamp),
+                Date(timeIntervalSince1970: dhuhrTimestamp),
+                Date(timeIntervalSince1970: asrTimestamp),
+                Date(timeIntervalSince1970: maghribTimestamp),
+                Date(timeIntervalSince1970: ishaTimestamp)
+            ]
+        } else {
+            let lat = appGroupPrefs?.double(forKey: "city_lat") ?? 36.1911
+            let lng = appGroupPrefs?.double(forKey: "city_lng") ?? 44.0092
+            let calculated = NativePrayerCalculator.calculate(
+                date: now,
+                latitude: lat > 0 ? lat : 36.1911,
+                longitude: lng > 0 ? lng : 44.0092
+            )
+            transitionDates = [
+                calculated.fajr,
+                calculated.sunrise,
+                calculated.dhuhr,
+                calculated.asr,
+                calculated.maghrib,
+                calculated.isha
+            ]
         }
 
-        let policyDate = futureDates.first ?? now.addingTimeInterval(900)
-        let timeline = Timeline(entries: entries, policy: .after(policyDate))
+        // Only transitions in the future today (+1 second past azan so card immediately updates)
+        let futureTransitionDates = transitionDates
+            .filter { $0 > now }
+            .map { $0.addingTimeInterval(1) }
+            .sorted()
+
+        // Build dynamic entries for each transition point
+        var entries: [PrayerEntry] = [currentEntry]
+        for tDate in futureTransitionDates.prefix(6) {
+            entries.append(fetchCurrentEntry(for: tDate))
+        }
+
+        let nextPolicyDate = futureTransitionDates.first ?? now.addingTimeInterval(900)
+        let timeline = Timeline(entries: entries, policy: .after(nextPolicyDate))
         completion(timeline)
     }
 
@@ -436,121 +457,148 @@ struct PrayerTimelineProvider: TimelineProvider {
         let sharedMaghrib = readString(allPrefs, keys: ["maghrib_time"])
         let sharedIsha    = readString(allPrefs, keys: ["isha_time"])
 
-        let hasCompleteSharedData = sharedFajr != nil && sharedSunrise != nil && sharedDhuhr != nil &&
-                                    sharedAsr != nil && sharedMaghrib != nil && sharedIsha != nil
+        let fajrTimestamp    = appGroupPrefs?.double(forKey: "fajr_timestamp") ?? 0
+        let sunriseTimestamp = appGroupPrefs?.double(forKey: "sunrise_timestamp") ?? 0
+        let dhuhrTimestamp   = appGroupPrefs?.double(forKey: "dhuhr_timestamp") ?? 0
+        let asrTimestamp     = appGroupPrefs?.double(forKey: "asr_timestamp") ?? 0
+        let maghribTimestamp = appGroupPrefs?.double(forKey: "maghrib_timestamp") ?? 0
+        let ishaTimestamp    = appGroupPrefs?.double(forKey: "isha_timestamp") ?? 0
 
+        let hasTimestamps = fajrTimestamp > 0 && sunriseTimestamp > 0 && dhuhrTimestamp > 0 &&
+                            asrTimestamp > 0 && maghribTimestamp > 0 && ishaTimestamp > 0
+
+        let fajrDate: Date
+        let sunriseDate: Date
+        let dhuhrDate: Date
+        let asrDate: Date
+        let maghribDate: Date
+        let ishaDate: Date
+
+        let fajrStr: String
+        let sunriseStr: String
+        let dhuhrStr: String
+        let asrStr: String
+        let maghribStr: String
+        let ishaStr: String
+
+        if hasTimestamps {
+            fajrDate    = Date(timeIntervalSince1970: fajrTimestamp)
+            sunriseDate = Date(timeIntervalSince1970: sunriseTimestamp)
+            dhuhrDate   = Date(timeIntervalSince1970: dhuhrTimestamp)
+            asrDate     = Date(timeIntervalSince1970: asrTimestamp)
+            maghribDate = Date(timeIntervalSince1970: maghribTimestamp)
+            ishaDate    = Date(timeIntervalSince1970: ishaTimestamp)
+
+            fajrStr    = sharedFajr ?? NativePrayerCalculator.formatCleanTime(fajrDate)
+            sunriseStr = sharedSunrise ?? NativePrayerCalculator.formatCleanTime(sunriseDate)
+            dhuhrStr   = sharedDhuhr ?? NativePrayerCalculator.formatCleanTime(dhuhrDate)
+            asrStr     = sharedAsr ?? NativePrayerCalculator.formatCleanTime(asrDate)
+            maghribStr = sharedMaghrib ?? NativePrayerCalculator.formatCleanTime(maghribDate)
+            ishaStr    = sharedIsha ?? NativePrayerCalculator.formatCleanTime(ishaDate)
+        } else {
+            let lat = appGroupPrefs?.double(forKey: "city_lat") ?? 36.1911
+            let lng = appGroupPrefs?.double(forKey: "city_lng") ?? 44.0092
+            let calculated = NativePrayerCalculator.calculate(
+                date: targetDate,
+                latitude: lat > 0 ? lat : 36.1911,
+                longitude: lng > 0 ? lng : 44.0092
+            )
+            fajrDate    = calculated.fajr
+            sunriseDate = calculated.sunrise
+            dhuhrDate   = calculated.dhuhr
+            asrDate     = calculated.asr
+            maghribDate = calculated.maghrib
+            ishaDate    = calculated.isha
+
+            fajrStr    = sharedFajr ?? NativePrayerCalculator.formatCleanTime(fajrDate)
+            sunriseStr = sharedSunrise ?? NativePrayerCalculator.formatCleanTime(sunriseDate)
+            dhuhrStr   = sharedDhuhr ?? NativePrayerCalculator.formatCleanTime(dhuhrDate)
+            asrStr     = sharedAsr ?? NativePrayerCalculator.formatCleanTime(asrDate)
+            maghribStr = sharedMaghrib ?? NativePrayerCalculator.formatCleanTime(maghribDate)
+            ishaStr    = sharedIsha ?? NativePrayerCalculator.formatCleanTime(ishaDate)
+        }
+
+        // Determine which prayer is next relative to targetDate
+        let nextId: String
+        let nextName: String
+        let nextFullTime: String
+        let nextTimestamp: Double
+
+        if targetDate < fajrDate {
+            nextId = "fajr"
+            nextName = isKurdish ? "بانگی بەیانی" : (isArabic ? "صلاة الفجر" : "Fajr")
+            nextFullTime = readString(allPrefs, keys: ["fajr_full_time"]) ?? NativePrayerCalculator.formatFullTime(fajrDate)
+            nextTimestamp = fajrDate.timeIntervalSince1970
+        } else if targetDate < sunriseDate {
+            nextId = "sunrise"
+            nextName = isKurdish ? "هەڵاتنی خۆر" : (isArabic ? "الشروق" : "Sunrise")
+            nextFullTime = readString(allPrefs, keys: ["sunrise_full_time"]) ?? NativePrayerCalculator.formatFullTime(sunriseDate)
+            nextTimestamp = sunriseDate.timeIntervalSince1970
+        } else if targetDate < dhuhrDate {
+            nextId = "dhuhr"
+            nextName = isKurdish ? "بانگی نیوەڕۆ" : (isArabic ? "صلاة الظهر" : "Dhuhr")
+            nextFullTime = readString(allPrefs, keys: ["dhuhr_full_time"]) ?? NativePrayerCalculator.formatFullTime(dhuhrDate)
+            nextTimestamp = dhuhrDate.timeIntervalSince1970
+        } else if targetDate < asrDate {
+            nextId = "asr"
+            nextName = isKurdish ? "بانگی عەسر" : (isArabic ? "صلاة العصر" : "Asr")
+            nextFullTime = readString(allPrefs, keys: ["asr_full_time"]) ?? NativePrayerCalculator.formatFullTime(asrDate)
+            nextTimestamp = asrDate.timeIntervalSince1970
+        } else if targetDate < maghribDate {
+            nextId = "maghrib"
+            nextName = isKurdish ? "بانگی شێوان" : (isArabic ? "صلاة المغرب" : "Maghrib")
+            nextFullTime = readString(allPrefs, keys: ["maghrib_full_time"]) ?? NativePrayerCalculator.formatFullTime(maghribDate)
+            nextTimestamp = maghribDate.timeIntervalSince1970
+        } else if targetDate < ishaDate {
+            nextId = "isha"
+            nextName = isKurdish ? "بانگی خەوتنان" : (isArabic ? "صلاة العشاء" : "Isha")
+            nextFullTime = readString(allPrefs, keys: ["isha_full_time"]) ?? NativePrayerCalculator.formatFullTime(ishaDate)
+            nextTimestamp = ishaDate.timeIntervalSince1970
+        } else {
+            // All prayers passed for today — next prayer is tomorrow's Fajr
+            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: targetDate) ?? targetDate.addingTimeInterval(86400)
+            let tomorrowFajrDate: Date
+            if hasTimestamps {
+                tomorrowFajrDate = fajrDate.addingTimeInterval(86400)
+            } else {
+                let lat = appGroupPrefs?.double(forKey: "city_lat") ?? 36.1911
+                let lng = appGroupPrefs?.double(forKey: "city_lng") ?? 44.0092
+                let tomorrowCalculated = NativePrayerCalculator.calculate(
+                    date: tomorrow,
+                    latitude: lat > 0 ? lat : 36.1911,
+                    longitude: lng > 0 ? lng : 44.0092
+                )
+                tomorrowFajrDate = tomorrowCalculated.fajr
+            }
+            nextId = "fajr"
+            nextName = isKurdish ? "بانگی بەیانی" : (isArabic ? "صلاة الفجر" : "Fajr")
+            nextFullTime = readString(allPrefs, keys: ["fajr_full_time"]) ?? NativePrayerCalculator.formatFullTime(tomorrowFajrDate)
+            nextTimestamp = tomorrowFajrDate.timeIntervalSince1970
+        }
+
+        let defaultCity = isKurdish ? "هەولێر" : (isArabic ? "أربيل" : "Erbil")
+        let cityName = readString(allPrefs, keys: ["city_name"]) ?? defaultCity
+        let hijriDate = readString(allPrefs, keys: ["hijri_date"]) ?? IslamicDateHelper.format(date: targetDate, isKurdish: isKurdish, isArabic: isArabic)
         let themeKey = readString(allPrefs, keys: ["theme_key"]) ?? "nuri"
 
-        if hasCompleteSharedData {
-            // App Group is working and has populated data from Flutter
-            let defaultCity       = isKurdish ? "کوردستان" : (isArabic ? "كردستان" : "Kurdistan")
-            let defaultNextPrayer = isKurdish ? "بانگی داهاتوو" : (isArabic ? "الصلاة القادمة" : "Next Prayer")
-
-            let cityName       = readString(allPrefs, keys: ["city_name"]) ?? defaultCity
-            let hijriDate      = readString(allPrefs, keys: ["hijri_date"]) ?? IslamicDateHelper.format(date: targetDate, isKurdish: isKurdish, isArabic: isArabic)
-            let nextPrayerName = readString(allPrefs, keys: ["next_prayer_name", "selected_prayer_name"]) ?? defaultNextPrayer
-            let nextPrayerTime = readString(allPrefs, keys: ["next_prayer_time", "selected_prayer_time"]) ?? (sharedFajr ?? "--:--")
-            let nextPrayerId   = readString(allPrefs, keys: ["next_prayer_id"]) ?? "fajr"
-            let nextPrayerTimestamp = appGroupPrefs?.double(forKey: "next_prayer_timestamp") ?? 0
-
-            return PrayerEntry(
-                date: targetDate,
-                cityName: cityName,
-                hijriDate: hijriDate,
-                nextPrayerName: nextPrayerName,
-                nextPrayerTime: nextPrayerTime,
-                nextPrayerTimestamp: nextPrayerTimestamp,
-                nextPrayerId: nextPrayerId,
-                fajr: sharedFajr!,
-                sunrise: sharedSunrise!,
-                dhuhr: sharedDhuhr!,
-                asr: sharedAsr!,
-                maghrib: sharedMaghrib!,
-                isha: sharedIsha!,
-                isKurdish: isKurdish,
-                isArabic: isArabic,
-                themeKey: themeKey
-            )
-        } else {
-            // ── Standalone Offline Astronomical Calculation ──
-            // Guaranteed accurate fallback: Never shows --:-- even on sideloaded apps
-            let calculated = NativePrayerCalculator.calculate(date: targetDate)
-
-            let fajrStr    = NativePrayerCalculator.formatCleanTime(calculated.fajr)
-            let sunriseStr = NativePrayerCalculator.formatCleanTime(calculated.sunrise)
-            let dhuhrStr   = NativePrayerCalculator.formatCleanTime(calculated.dhuhr)
-            let asrStr     = NativePrayerCalculator.formatCleanTime(calculated.asr)
-            let maghribStr = NativePrayerCalculator.formatCleanTime(calculated.maghrib)
-            let ishaStr    = NativePrayerCalculator.formatCleanTime(calculated.isha)
-
-            // Determine next upcoming prayer relative to targetDate
-            let nextId: String
-            let nextName: String
-            let nextFullTime: String
-            let nextTimestamp: Double
-
-            if targetDate < calculated.fajr {
-                nextId = "fajr"
-                nextName = isKurdish ? "بانگی بەیانی" : (isArabic ? "صلاة الفجر" : "Fajr")
-                nextFullTime = NativePrayerCalculator.formatFullTime(calculated.fajr)
-                nextTimestamp = calculated.fajr.timeIntervalSince1970
-            } else if targetDate < calculated.sunrise {
-                nextId = "sunrise"
-                nextName = isKurdish ? "هەڵاتنی خۆر" : (isArabic ? "الشروق" : "Sunrise")
-                nextFullTime = NativePrayerCalculator.formatFullTime(calculated.sunrise)
-                nextTimestamp = calculated.sunrise.timeIntervalSince1970
-            } else if targetDate < calculated.dhuhr {
-                nextId = "dhuhr"
-                nextName = isKurdish ? "بانگی نیوەڕۆ" : (isArabic ? "صلاة الظهر" : "Dhuhr")
-                nextFullTime = NativePrayerCalculator.formatFullTime(calculated.dhuhr)
-                nextTimestamp = calculated.dhuhr.timeIntervalSince1970
-            } else if targetDate < calculated.asr {
-                nextId = "asr"
-                nextName = isKurdish ? "بانگی عەسر" : (isArabic ? "صلاة العصر" : "Asr")
-                nextFullTime = NativePrayerCalculator.formatFullTime(calculated.asr)
-                nextTimestamp = calculated.asr.timeIntervalSince1970
-            } else if targetDate < calculated.maghrib {
-                nextId = "maghrib"
-                nextName = isKurdish ? "بانگی شێوان" : (isArabic ? "صلاة المغرب" : "Maghrib")
-                nextFullTime = NativePrayerCalculator.formatFullTime(calculated.maghrib)
-                nextTimestamp = calculated.maghrib.timeIntervalSince1970
-            } else if targetDate < calculated.isha {
-                nextId = "isha"
-                nextName = isKurdish ? "بانگی خەوتنان" : (isArabic ? "صلاة العشاء" : "Isha")
-                nextFullTime = NativePrayerCalculator.formatFullTime(calculated.isha)
-                nextTimestamp = calculated.isha.timeIntervalSince1970
-            } else {
-                // All prayers passed for today — next prayer is tomorrow's Fajr
-                let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: targetDate) ?? targetDate.addingTimeInterval(86400)
-                let tomorrowCalculated = NativePrayerCalculator.calculate(date: tomorrow)
-                nextId = "fajr"
-                nextName = isKurdish ? "بانگی بەیانی" : (isArabic ? "صلاة الفجر" : "Fajr")
-                nextFullTime = NativePrayerCalculator.formatFullTime(tomorrowCalculated.fajr)
-                nextTimestamp = tomorrowCalculated.fajr.timeIntervalSince1970
-            }
-
-            let cityName = readString(allPrefs, keys: ["city_name"]) ?? (isKurdish ? "هەولێر" : (isArabic ? "أربيل" : "Erbil"))
-            let hijriDate = IslamicDateHelper.format(date: targetDate, isKurdish: isKurdish, isArabic: isArabic)
-
-            return PrayerEntry(
-                date: targetDate,
-                cityName: cityName,
-                hijriDate: hijriDate,
-                nextPrayerName: nextName,
-                nextPrayerTime: nextFullTime,
-                nextPrayerTimestamp: nextTimestamp,
-                nextPrayerId: nextId,
-                fajr: fajrStr,
-                sunrise: sunriseStr,
-                dhuhr: dhuhrStr,
-                asr: asrStr,
-                maghrib: maghribStr,
-                isha: ishaStr,
-                isKurdish: isKurdish,
-                isArabic: isArabic,
-                themeKey: themeKey
-            )
-        }
+        return PrayerEntry(
+            date: targetDate,
+            cityName: cityName,
+            hijriDate: hijriDate,
+            nextPrayerName: nextName,
+            nextPrayerTime: nextFullTime,
+            nextPrayerTimestamp: nextTimestamp,
+            nextPrayerId: nextId,
+            fajr: fajrStr,
+            sunrise: sunriseStr,
+            dhuhr: dhuhrStr,
+            asr: asrStr,
+            maghrib: maghribStr,
+            isha: ishaStr,
+            isKurdish: isKurdish,
+            isArabic: isArabic,
+            themeKey: themeKey
+        )
     }
 }
 

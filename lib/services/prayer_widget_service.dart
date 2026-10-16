@@ -244,6 +244,11 @@ class PrayerWidgetService {
       final prayerProgress = _calcPrayerProgress(currentItem, nextItem);
 
       // ── Save all data (App Group set above for iOS) ──
+      final lat = (schedule['latitude'] as num?)?.toDouble() ?? 36.1911;
+      final lng = (schedule['longitude'] as num?)?.toDouble() ?? 44.0092;
+      await _saveDouble('city_lat', lat);
+      await _saveDouble('city_lng', lng);
+
       await _saveDouble('prayer_progress', prayerProgress);
       await _save('city_name', cityName);
       await _save('hijri_date', hijriDateFormatted);
@@ -260,8 +265,14 @@ class PrayerWidgetService {
       await _save('selected_prayer_id', nextPrayerId);
       await _save('current_prayer_id', nextPrayerId);
 
-      // Unix seconds of the next prayer — iOS widget reads this to compute
-      // an always-accurate countdown at SwiftUI render time (never stale).
+      // Save exact Unix seconds timestamp for every prayer so iOS WidgetKit can
+      // schedule precision timeline switches throughout the day without string guessing.
+      for (final item in items) {
+        final sec = item.time.millisecondsSinceEpoch / 1000.0;
+        await _saveDouble('${item.id}_timestamp', sec);
+        await _save('${item.id}_full_time', _fullTime(item.time));
+      }
+
       if (nextItem != null) {
         await _saveDouble(
           'next_prayer_timestamp',
