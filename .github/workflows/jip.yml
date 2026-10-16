@@ -80,7 +80,7 @@ jobs:
           node-version: 18
 
       - name: Install JSON Assets (Quran, Hadith, & Prayer Timetables)
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
