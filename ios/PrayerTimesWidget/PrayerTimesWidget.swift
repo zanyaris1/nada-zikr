@@ -1055,33 +1055,84 @@ struct PrayerTimesWidgetEntryView: View {
         .environment(\.layoutDirection, (entry.isKurdish || entry.isArabic) ? .rightToLeft : .leftToRight)
     }
 
+    private func shortPrayerName(_ slot: PrayerSlot) -> String {
+        switch slot.id {
+        case "fajr":
+            return entry.isKurdish ? "بەیانی" : (entry.isArabic ? "فجر" : "Fajr")
+        case "sunrise":
+            return entry.isKurdish ? "خۆر" : (entry.isArabic ? "شروق" : "Sun")
+        case "dhuhr":
+            return entry.isKurdish ? "نیوەڕۆ" : (entry.isArabic ? "ظهر" : "Dhuhr")
+        case "asr":
+            return entry.isKurdish ? "عەسر" : (entry.isArabic ? "عصر" : "Asr")
+        case "maghrib":
+            return entry.isKurdish ? "شێوان" : (entry.isArabic ? "مغرب" : "Magh")
+        case "isha":
+            return entry.isKurdish ? "خەوتنان" : (entry.isArabic ? "عشاء" : "Isha")
+        default:
+            return prayerName(slot)
+        }
+    }
+
     // MARK: - Lock Screen Widgets (iOS 16+, No Emojis)
 
     @available(iOSApplicationExtension 16.0, *)
     var lockScreenRectangular: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text(entry.cityName)
-                    .font(.system(size: 10, weight: .semibold))
-                    .lineLimit(1)
-                Spacer()
-                Text(entry.nextPrayerName)
-                    .font(.system(size: 10, weight: .bold))
-                    .lineLimit(1)
-            }
+        VStack(alignment: .leading, spacing: 3) {
+            // Header Row: Next Prayer Name + Time + Live Countdown Timer
             HStack(alignment: .firstTextBaseline) {
-                Text(entry.nextPrayerTime)
-                    .font(.system(size: 17, weight: .heavy, design: .rounded))
-                    .lineLimit(1)
+                HStack(spacing: 3) {
+                    if let nextSlot = prayerSlots().first(where: { $0.isNext }) {
+                        Image(systemName: nextSlot.iconName)
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    Text(cleanNextPrayerName)
+                        .font(.system(size: 11, weight: .bold))
+                        .lineLimit(1)
+                    Text(cleanTime(entry.nextPrayerTime))
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .lineLimit(1)
+                }
                 Spacer()
-                if !entry.liveRemainingText.isEmpty {
+                if let target = entry.nextPrayerDate, target > Date() {
+                    Text(target, style: .timer)
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .lineLimit(1)
+                } else if !entry.liveRemainingText.isEmpty {
                     Text(entry.liveRemainingText)
                         .font(.system(size: 9))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
             }
+
+            // Subtle divider
+            Rectangle()
+                .fill(Color.secondary.opacity(0.3))
+                .frame(height: 0.5)
+
+            // Bottom Grid: All 6 Prayer Times (Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha)
+            HStack(spacing: 1.5) {
+                let slots = prayerSlots()
+                ForEach(slots) { slot in
+                    VStack(spacing: 1) {
+                        Text(shortPrayerName(slot))
+                            .font(.system(size: 7.5, weight: slot.isNext ? .bold : .medium))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        Text(cleanTime(slot.time))
+                            .font(.system(size: 8.5, weight: slot.isNext ? .heavy : .regular, design: .monospaced))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 1.5)
+                    .background(slot.isNext ? Color.white.opacity(0.22) : Color.clear)
+                    .clipShape(RoundedRectangle(cornerRadius: 3.5, style: .continuous))
+                }
+            }
         }
+        .environment(\.layoutDirection, (entry.isKurdish || entry.isArabic) ? .rightToLeft : .leftToRight)
     }
 
     @available(iOSApplicationExtension 16.0, *)
