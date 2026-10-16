@@ -40,10 +40,6 @@ jobs:
     name: Build iOS IPA (SideStore & Full)
     runs-on: macos-14
 
-    defaults:
-      run:
-        working-directory: nada-zikr
-
     outputs:
       version_name: ${{ steps.meta.outputs.version_name }}
       build_num: ${{ steps.meta.outputs.build_num }}
@@ -77,6 +73,14 @@ jobs:
           echo " App Version: $VERSION_NAME (Build $BUILD_NUM)"
           echo " Release Tag: $TAG"
           echo "=================================================="
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install JSON Assets (Quran, Hadith, & Prayer Timetables)
+        run: npm ci
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -142,8 +146,8 @@ jobs:
         with:
           name: Nada-Zikr-iOS-IPA
           path: |
-            nada-zikr/Nada-Zikr-SideStore.ipa
-            nada-zikr/Nada-Zikr-Full.ipa
+            Nada-Zikr-SideStore.ipa
+            Nada-Zikr-Full.ipa
           retention-days: 30
           if-no-files-found: error
 
