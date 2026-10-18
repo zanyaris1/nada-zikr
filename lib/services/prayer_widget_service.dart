@@ -253,6 +253,11 @@ class PrayerWidgetService {
       final currentCity = schedule['city'] as WorldCity?;
       if (currentCity != null) {
         await _save('city_id', currentCity.id);
+        await _save('city_name_en', currentCity.nameEn);
+        await _save('city_name_ku', currentCity.nameKu);
+        await _save('city_name_ar', currentCity.nameAr);
+        await _save('widget_selected_city_id', currentCity.id);
+        await _saveDouble('city_update_timestamp', DateTime.now().millisecondsSinceEpoch.toDouble());
         if (currentCity.datasetKey != null) {
           await _save('city_dataset_key', currentCity.datasetKey!);
         }
