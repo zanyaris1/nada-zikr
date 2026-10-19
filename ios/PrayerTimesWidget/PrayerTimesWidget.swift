@@ -1,9 +1,5 @@
 import WidgetKit
 import SwiftUI
-import CoreLocation
-#if canImport(AppIntents)
-import AppIntents
-#endif
 
 private let appGroupId = "group.com.nada.nadaZikrakanm"
 
@@ -370,222 +366,6 @@ enum NativePrayerCalculator {
     }
 }
 
-// MARK: - Widget City Catalog & Location Fallback System
-
-struct WidgetCity: Identifiable, Equatable {
-    let id: String
-    let nameKu: String
-    let nameAr: String
-    let nameEn: String
-    let latitude: Double
-    let longitude: Double
-
-    func displayName(isKurdish: Bool, isArabic: Bool) -> String {
-        if isKurdish { return nameKu }
-        if isArabic { return nameAr }
-        return nameEn
-    }
-}
-
-enum WidgetCityRegistry {
-    static let cities: [WidgetCity] = [
-        WidgetCity(id: "Hawler",      nameKu: "هەولێر",       nameAr: "أربيل",       nameEn: "Erbil",        latitude: 36.1911, longitude: 44.0092),
-        WidgetCity(id: "Slemani",     nameKu: "سلێمانی",      nameAr: "السليمانية",   nameEn: "Sulaymaniyah", latitude: 35.5570, longitude: 45.4351),
-        WidgetCity(id: "Duhok",       nameKu: "دهۆک",        nameAr: "دهوك",        nameEn: "Duhok",        latitude: 36.8617, longitude: 42.9992),
-        WidgetCity(id: "Kirkuk",      nameKu: "کەرکووک",      nameAr: "كركوك",       nameEn: "Kirkuk",       latitude: 35.4681, longitude: 44.3922),
-        WidgetCity(id: "Halabja",     nameKu: "هەڵەبجە",      nameAr: "حلبجة",       nameEn: "Halabja",      latitude: 35.1778, longitude: 45.9861),
-        WidgetCity(id: "Zakho",       nameKu: "زاخۆ",        nameAr: "زاخو",        nameEn: "Zakho",        latitude: 37.1445, longitude: 42.6872),
-        WidgetCity(id: "Kalar",       nameKu: "کەلار",        nameAr: "كلار",        nameEn: "Kalar",        latitude: 34.6294, longitude: 45.3169),
-        WidgetCity(id: "Rania",       nameKu: "ڕانیە",        nameAr: "رانية",       nameEn: "Rania",        latitude: 36.2547, longitude: 44.8825),
-        WidgetCity(id: "Chamchamal",  nameKu: "چەمچەماڵ",     nameAr: "جمجمال",      nameEn: "Chamchamal",   latitude: 35.5317, longitude: 44.8344),
-        WidgetCity(id: "Koya",        nameKu: "کۆیە",         nameAr: "كويسنجق",     nameEn: "Koya",         latitude: 36.0828, longitude: 44.6289),
-        WidgetCity(id: "Soran",       nameKu: "سۆران",        nameAr: "سوران",       nameEn: "Soran",        latitude: 36.6500, longitude: 44.5386),
-        WidgetCity(id: "Akre",        nameKu: "ئاکرێ",        nameAr: "عقرة",        nameEn: "Akre",         latitude: 36.7411, longitude: 43.8933),
-        WidgetCity(id: "SaidSadiq",   nameKu: "سەید سادق",    nameAr: "سيد صادق",    nameEn: "Said Sadiq",   latitude: 35.3558, longitude: 45.8642),
-        WidgetCity(id: "Derbendikhan",nameKu: "دەربەندیخان",  nameAr: "دربندخان",    nameEn: "Derbendikhan", latitude: 35.1114, longitude: 45.6961),
-        WidgetCity(id: "Qaladiza",    nameKu: "قەڵادزێ",      nameAr: "قلعة دزة",    nameEn: "Qaladiza",     latitude: 36.1808, longitude: 45.1228),
-        WidgetCity(id: "Shaqlawa",    nameKu: "شەقڵاوە",      nameAr: "شقلاوة",      nameEn: "Shaqlawa",     latitude: 36.4042, longitude: 44.3267),
-        WidgetCity(id: "Amadiya",     nameKu: "ئامێدی",       nameAr: "العمادية",    nameEn: "Amadiya",      latitude: 37.0917, longitude: 43.4878),
-        WidgetCity(id: "Baghdad",     nameKu: "بەغدا",        nameAr: "بغداد",       nameEn: "Baghdad",      latitude: 33.3152, longitude: 44.3661),
-        WidgetCity(id: "Mosul",       nameKu: "موسڵ",         nameAr: "الموصل",      nameEn: "Mosul",        latitude: 36.3350, longitude: 43.1189)
-    ]
-
-    static func city(byId id: String?) -> WidgetCity? {
-        guard let id = id?.trimmingCharacters(in: .whitespacesAndNewlines), !id.isEmpty else { return nil }
-        return cities.first { $0.id.caseInsensitiveCompare(id) == .orderedSame }
-    }
-
-    static func city(byName name: String?) -> WidgetCity? {
-        guard let name = name?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty else { return nil }
-        return cities.first {
-            $0.nameKu == name || $0.nameAr == name || $0.nameEn.caseInsensitiveCompare(name) == .orderedSame
-        }
-    }
-
-    static func closestCity(lat: Double, lng: Double) -> WidgetCity? {
-        var minDistance = Double.greatestFiniteMagnitude
-        var bestCity: WidgetCity? = nil
-        for c in cities {
-            let dist = distanceInKm(lat1: lat, lon1: lng, lat2: c.latitude, lon2: c.longitude)
-            if dist < minDistance {
-                minDistance = dist
-                bestCity = c
-            }
-        }
-        if minDistance <= 150.0 {
-            return bestCity
-        }
-        return nil
-    }
-
-    private static func distanceInKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double) -> Double {
-        let r = 6371.0
-        let dLat = (lat2 - lat1) * .pi / 180.0
-        let dLon = (lon2 - lon1) * .pi / 180.0
-        let a = sin(dLat / 2) * sin(dLat / 2) +
-                cos(lat1 * .pi / 180.0) * cos(lat2 * .pi / 180.0) *
-                sin(dLon / 2) * sin(dLon / 2)
-        let c = 2 * atan2(sqrt(a), sqrt(1 - a))
-        return r * c
-    }
-
-    static func cycleNextCity() {
-        let currentCityId = UserDefaults.standard.string(forKey: "widget_selected_city_id")
-        let currentIndex = cities.firstIndex { $0.id == currentCityId } ?? 0
-        let nextIndex = (currentIndex + 1) % cities.count
-        let nextCity = cities[nextIndex]
-        UserDefaults.standard.set(nextCity.id, forKey: "widget_selected_city_id")
-        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "widget_city_selected_time")
-    }
-
-    static func getActiveCity(allPrefs: [UserDefaults?]) -> WidgetCity {
-        // 1. Check local widget explicit user selection (Highest priority on sideloaded devices)
-        if let localSelectedId = UserDefaults.standard.string(forKey: "widget_selected_city_id"),
-           let localCity = city(byId: localSelectedId) {
-            return localCity
-        }
-
-        // 2. Check App Group shared preferences (if working / paid cert / TrollStore)
-        for pref in allPrefs {
-            guard let p = pref else { continue }
-            if let cityId = p.string(forKey: "city_id"), let found = city(byId: cityId) {
-                return found
-            }
-            if let cityName = p.string(forKey: "city_name"), let found = city(byName: cityName) {
-                return found
-            }
-        }
-
-        // 3. Check GPS location (NSWidgetWantsLocation)
-        let locManager = CLLocationManager()
-        let status: CLAuthorizationStatus
-        if #available(iOS 14.0, *) {
-            status = locManager.authorizationStatus
-        } else {
-            status = CLLocationManager.authorizationStatus()
-        }
-        if status == .authorizedWhenInUse || status == .authorizedAlways {
-            if let coord = locManager.location?.coordinate,
-               let nearest = closestCity(lat: coord.latitude, lng: coord.longitude) {
-                return nearest
-            }
-        }
-
-        // 4. Default: Hawler (Erbil)
-        return cities[0]
-    }
-}
-
-#if canImport(AppIntents)
-@available(iOS 16.0, *)
-struct SwitchWidgetCityIntent: AppIntent {
-    static var title: LocalizedStringResource = "Switch Prayer City"
-    static var description = IntentDescription("Cycles to the next Kurdistan city for prayer times")
-
-    init() {}
-
-    func perform() async throws -> some IntentResult {
-        WidgetCityRegistry.cycleNextCity()
-        WidgetCenter.shared.reloadAllTimelines()
-        return .result()
-    }
-}
-#endif
-
-// MARK: - Interactive City Switcher Buttons
-
-struct CitySwitchButton: View {
-    let cityName: String
-    let theme: ThemeColors
-    let fontSize: CGFloat
-    let iconSize: CGFloat
-    let showBadge: Bool
-
-    var body: some View {
-        #if canImport(AppIntents)
-        if #available(iOS 17.0, *) {
-            Button(intent: SwitchWidgetCityIntent()) {
-                content
-            }
-            .buttonStyle(.plain)
-        } else {
-            content
-        }
-        #else
-        content
-        #endif
-    }
-
-    private var content: some View {
-        HStack(spacing: 3.5) {
-            Image(systemName: "mappin.circle.fill")
-                .font(.system(size: iconSize))
-                .foregroundColor(theme.primary)
-            Text(cityName)
-                .font(.system(size: fontSize, weight: .bold))
-                .foregroundColor(theme.secondary)
-                .lineLimit(1)
-            Image(systemName: "arrow.triangle.2.circlepath")
-                .font(.system(size: max(8, iconSize - 4), weight: .bold))
-                .foregroundColor(theme.primary.opacity(0.85))
-        }
-        .padding(.horizontal, showBadge ? 6 : 0)
-        .padding(.vertical, showBadge ? 2.5 : 0)
-        .background(showBadge ? theme.cardBackground.opacity(0.4) : Color.clear)
-        .clipShape(Capsule())
-    }
-}
-
-struct CitySwitchButtonLockScreen: View {
-    let cityName: String
-
-    var body: some View {
-        #if canImport(AppIntents)
-        if #available(iOS 17.0, *) {
-            Button(intent: SwitchWidgetCityIntent()) {
-                content
-            }
-            .buttonStyle(.plain)
-        } else {
-            content
-        }
-        #else
-        content
-        #endif
-    }
-
-    private var content: some View {
-        HStack(spacing: 2) {
-            Text("• \(cityName)")
-                .font(.system(size: 8.5, weight: .semibold))
-                .lineLimit(1)
-            Image(systemName: "arrow.triangle.2.circlepath")
-                .font(.system(size: 7, weight: .bold))
-        }
-        .foregroundColor(.secondary)
-    }
-}
-
 // MARK: - Timeline Provider
 
 struct PrayerTimelineProvider: TimelineProvider {
@@ -661,13 +441,6 @@ struct PrayerTimelineProvider: TimelineProvider {
         let standardPrefs = UserDefaults.standard
         let allPrefs = [appGroupPrefs, standardPrefs]
 
-        let activeCity = WidgetCityRegistry.getActiveCity(allPrefs: allPrefs)
-
-        let appGroupCityId = readString(allPrefs, keys: ["city_id", "widget_selected_city_id"])
-        let appGroupCityName = readString(allPrefs, keys: ["city_name", "city_name_ku", "city_name_en", "city_name_ar"])
-        let isAppGroupCityMatch = (appGroupCityId != nil && appGroupCityId?.caseInsensitiveCompare(activeCity.id) == .orderedSame) ||
-                                  (appGroupCityName != nil && (appGroupCityName == activeCity.nameKu || appGroupCityName == activeCity.nameAr || appGroupCityName?.caseInsensitiveCompare(activeCity.nameEn) == .orderedSame))
-
         // Build exact transition dates for today using timestamps or parsed full times
         let fajrTimestamp    = readDouble(allPrefs, keys: ["fajr_timestamp", "fajr_timestamp_str"]) ?? 0
         let sunriseTimestamp = readDouble(allPrefs, keys: ["sunrise_timestamp", "sunrise_timestamp_str"]) ?? 0
@@ -677,7 +450,7 @@ struct PrayerTimelineProvider: TimelineProvider {
         let ishaTimestamp    = readDouble(allPrefs, keys: ["isha_timestamp", "isha_timestamp_str"]) ?? 0
 
         var transitionDates: [Date] = []
-        if isAppGroupCityMatch && fajrTimestamp > 0 && ishaTimestamp > 0 {
+        if fajrTimestamp > 0 && ishaTimestamp > 0 {
             transitionDates = [
                 Date(timeIntervalSince1970: fajrTimestamp),
                 Date(timeIntervalSince1970: sunriseTimestamp),
@@ -686,8 +459,7 @@ struct PrayerTimelineProvider: TimelineProvider {
                 Date(timeIntervalSince1970: maghribTimestamp),
                 Date(timeIntervalSince1970: ishaTimestamp)
             ]
-        } else if isAppGroupCityMatch,
-                  let pFajr = parseTimeToDate(readString(allPrefs, keys: ["fajr_full_time", "fajr_time"]), for: now, isPMDefault: false),
+        } else if let pFajr = parseTimeToDate(readString(allPrefs, keys: ["fajr_full_time", "fajr_time"]), for: now, isPMDefault: false),
                   let pSunrise = parseTimeToDate(readString(allPrefs, keys: ["sunrise_full_time", "sunrise_time"]), for: now, isPMDefault: false),
                   let pDhuhr = parseTimeToDate(readString(allPrefs, keys: ["dhuhr_full_time", "dhuhr_time"]), for: now, isPMDefault: false),
                   let pAsr = parseTimeToDate(readString(allPrefs, keys: ["asr_full_time", "asr_time"]), for: now, isPMDefault: true),
@@ -695,10 +467,12 @@ struct PrayerTimelineProvider: TimelineProvider {
                   let pIsha = parseTimeToDate(readString(allPrefs, keys: ["isha_full_time", "isha_time"]), for: now, isPMDefault: true) {
             transitionDates = [pFajr, pSunrise, pDhuhr, pAsr, pMaghrib, pIsha]
         } else {
+            let lat = readDouble(allPrefs, keys: ["city_lat", "city_lat_str"]) ?? 36.1911
+            let lng = readDouble(allPrefs, keys: ["city_lng", "city_lng_str"]) ?? 44.0092
             let calculated = NativePrayerCalculator.calculate(
                 date: now,
-                latitude: activeCity.latitude,
-                longitude: activeCity.longitude
+                latitude: lat > 0 ? lat : 36.1911,
+                longitude: lng > 0 ? lng : 44.0092
             )
             transitionDates = [
                 calculated.fajr,
@@ -736,13 +510,6 @@ struct PrayerTimelineProvider: TimelineProvider {
         let isKurdish = lang == "ku" || lang == "kmr"
         let isArabic  = lang == "ar"
 
-        let activeCity = WidgetCityRegistry.getActiveCity(allPrefs: allPrefs)
-
-        let appGroupCityId = readString(allPrefs, keys: ["city_id", "widget_selected_city_id"])
-        let appGroupCityName = readString(allPrefs, keys: ["city_name", "city_name_ku", "city_name_en", "city_name_ar"])
-        let isAppGroupCityMatch = (appGroupCityId != nil && appGroupCityId?.caseInsensitiveCompare(activeCity.id) == .orderedSame) ||
-                                  (appGroupCityName != nil && (appGroupCityName == activeCity.nameKu || appGroupCityName == activeCity.nameAr || appGroupCityName?.caseInsensitiveCompare(activeCity.nameEn) == .orderedSame))
-
         let sharedFajr    = readString(allPrefs, keys: ["fajr_time"])
         let sharedSunrise = readString(allPrefs, keys: ["sunrise_time"])
         let sharedDhuhr   = readString(allPrefs, keys: ["dhuhr_time"])
@@ -774,7 +541,7 @@ struct PrayerTimelineProvider: TimelineProvider {
         let maghribStr: String
         let ishaStr: String
 
-        if isAppGroupCityMatch && hasTimestamps {
+        if hasTimestamps {
             fajrDate    = Date(timeIntervalSince1970: fajrTimestamp)
             sunriseDate = Date(timeIntervalSince1970: sunriseTimestamp)
             dhuhrDate   = Date(timeIntervalSince1970: dhuhrTimestamp)
@@ -788,8 +555,7 @@ struct PrayerTimelineProvider: TimelineProvider {
             asrStr     = sharedAsr ?? NativePrayerCalculator.formatCleanTime(asrDate)
             maghribStr = sharedMaghrib ?? NativePrayerCalculator.formatCleanTime(maghribDate)
             ishaStr    = sharedIsha ?? NativePrayerCalculator.formatCleanTime(ishaDate)
-        } else if isAppGroupCityMatch,
-                  let pFajr = parseTimeToDate(readString(allPrefs, keys: ["fajr_full_time", "fajr_time"]), for: targetDate, isPMDefault: false),
+        } else if let pFajr = parseTimeToDate(readString(allPrefs, keys: ["fajr_full_time", "fajr_time"]), for: targetDate, isPMDefault: false),
                   let pSunrise = parseTimeToDate(readString(allPrefs, keys: ["sunrise_full_time", "sunrise_time"]), for: targetDate, isPMDefault: false),
                   let pDhuhr = parseTimeToDate(readString(allPrefs, keys: ["dhuhr_full_time", "dhuhr_time"]), for: targetDate, isPMDefault: false),
                   let pAsr = parseTimeToDate(readString(allPrefs, keys: ["asr_full_time", "asr_time"]), for: targetDate, isPMDefault: true),
@@ -809,10 +575,12 @@ struct PrayerTimelineProvider: TimelineProvider {
             maghribStr = sharedMaghrib ?? NativePrayerCalculator.formatCleanTime(maghribDate)
             ishaStr    = sharedIsha ?? NativePrayerCalculator.formatCleanTime(ishaDate)
         } else {
+            let lat = readDouble(allPrefs, keys: ["city_lat", "city_lat_str"]) ?? 36.1911
+            let lng = readDouble(allPrefs, keys: ["city_lng", "city_lng_str"]) ?? 44.0092
             let calculated = NativePrayerCalculator.calculate(
                 date: targetDate,
-                latitude: activeCity.latitude,
-                longitude: activeCity.longitude
+                latitude: lat > 0 ? lat : 36.1911,
+                longitude: lng > 0 ? lng : 44.0092
             )
             fajrDate    = calculated.fajr
             sunriseDate = calculated.sunrise
@@ -821,12 +589,12 @@ struct PrayerTimelineProvider: TimelineProvider {
             maghribDate = calculated.maghrib
             ishaDate    = calculated.isha
 
-            fajrStr    = NativePrayerCalculator.formatCleanTime(fajrDate)
-            sunriseStr = NativePrayerCalculator.formatCleanTime(sunriseDate)
-            dhuhrStr   = NativePrayerCalculator.formatCleanTime(dhuhrDate)
-            asrStr     = NativePrayerCalculator.formatCleanTime(asrDate)
-            maghribStr = NativePrayerCalculator.formatCleanTime(maghribDate)
-            ishaStr    = NativePrayerCalculator.formatCleanTime(ishaDate)
+            fajrStr    = sharedFajr ?? NativePrayerCalculator.formatCleanTime(fajrDate)
+            sunriseStr = sharedSunrise ?? NativePrayerCalculator.formatCleanTime(sunriseDate)
+            dhuhrStr   = sharedDhuhr ?? NativePrayerCalculator.formatCleanTime(dhuhrDate)
+            asrStr     = sharedAsr ?? NativePrayerCalculator.formatCleanTime(asrDate)
+            maghribStr = sharedMaghrib ?? NativePrayerCalculator.formatCleanTime(maghribDate)
+            ishaStr    = sharedIsha ?? NativePrayerCalculator.formatCleanTime(ishaDate)
         }
 
         // Determine which prayer is next relative to targetDate
@@ -838,43 +606,44 @@ struct PrayerTimelineProvider: TimelineProvider {
         if targetDate < fajrDate {
             nextId = "fajr"
             nextName = isKurdish ? "بانگی بەیانی" : (isArabic ? "صلاة الفجر" : "Fajr")
-            nextFullTime = (isAppGroupCityMatch ? readString(allPrefs, keys: ["fajr_full_time"]) : nil) ?? NativePrayerCalculator.formatFullTime(fajrDate)
+            nextFullTime = readString(allPrefs, keys: ["fajr_full_time"]) ?? NativePrayerCalculator.formatFullTime(fajrDate)
             nextTimestamp = fajrDate.timeIntervalSince1970
         } else if targetDate < sunriseDate {
             nextId = "sunrise"
             nextName = isKurdish ? "هەڵاتنی خۆر" : (isArabic ? "الشروق" : "Sunrise")
-            nextFullTime = (isAppGroupCityMatch ? readString(allPrefs, keys: ["sunrise_full_time"]) : nil) ?? NativePrayerCalculator.formatFullTime(sunriseDate)
+            nextFullTime = readString(allPrefs, keys: ["sunrise_full_time"]) ?? NativePrayerCalculator.formatFullTime(sunriseDate)
             nextTimestamp = sunriseDate.timeIntervalSince1970
         } else if targetDate < dhuhrDate {
             nextId = "dhuhr"
             nextName = isKurdish ? "بانگی نیوەڕۆ" : (isArabic ? "صلاة الظهر" : "Dhuhr")
-            nextFullTime = (isAppGroupCityMatch ? readString(allPrefs, keys: ["dhuhr_full_time"]) : nil) ?? NativePrayerCalculator.formatFullTime(dhuhrDate)
+            nextFullTime = readString(allPrefs, keys: ["dhuhr_full_time"]) ?? NativePrayerCalculator.formatFullTime(dhuhrDate)
             nextTimestamp = dhuhrDate.timeIntervalSince1970
         } else if targetDate < asrDate {
             nextId = "asr"
             nextName = isKurdish ? "بانگی عەسر" : (isArabic ? "صلاة العصر" : "Asr")
-            nextFullTime = (isAppGroupCityMatch ? readString(allPrefs, keys: ["asr_full_time"]) : nil) ?? NativePrayerCalculator.formatFullTime(asrDate)
+            nextFullTime = readString(allPrefs, keys: ["asr_full_time"]) ?? NativePrayerCalculator.formatFullTime(asrDate)
             nextTimestamp = asrDate.timeIntervalSince1970
         } else if targetDate < maghribDate {
             nextId = "maghrib"
             nextName = isKurdish ? "بانگی شێوان" : (isArabic ? "صلاة المغرب" : "Maghrib")
-            nextFullTime = (isAppGroupCityMatch ? readString(allPrefs, keys: ["maghrib_full_time"]) : nil) ?? NativePrayerCalculator.formatFullTime(maghribDate)
+            nextFullTime = readString(allPrefs, keys: ["maghrib_full_time"]) ?? NativePrayerCalculator.formatFullTime(maghribDate)
             nextTimestamp = maghribDate.timeIntervalSince1970
         } else if targetDate < ishaDate {
             nextId = "isha"
             nextName = isKurdish ? "بانگی خەوتنان" : (isArabic ? "صلاة العشاء" : "Isha")
-            nextFullTime = (isAppGroupCityMatch ? readString(allPrefs, keys: ["isha_full_time"]) : nil) ?? NativePrayerCalculator.formatFullTime(ishaDate)
+            nextFullTime = readString(allPrefs, keys: ["isha_full_time"]) ?? NativePrayerCalculator.formatFullTime(ishaDate)
             nextTimestamp = ishaDate.timeIntervalSince1970
         } else {
             // All prayers passed for today — next prayer is tomorrow's Fajr
             let tomorrowFajrDate = fajrDate.addingTimeInterval(86400)
             nextId = "fajr"
             nextName = isKurdish ? "بانگی بەیانی" : (isArabic ? "صلاة الفجر" : "Fajr")
-            nextFullTime = NativePrayerCalculator.formatFullTime(tomorrowFajrDate)
+            nextFullTime = readString(allPrefs, keys: ["fajr_full_time"]) ?? NativePrayerCalculator.formatFullTime(tomorrowFajrDate)
             nextTimestamp = tomorrowFajrDate.timeIntervalSince1970
         }
 
-        let cityName = activeCity.displayName(isKurdish: isKurdish, isArabic: isArabic)
+        let defaultCity = isKurdish ? "هەولێر" : (isArabic ? "أربيل" : "Erbil")
+        let cityName = readString(allPrefs, keys: ["city_name", "city_name_ku", "city_name_ar", "city_name_en"]) ?? defaultCity
         let hijriDate = readString(allPrefs, keys: ["hijri_date"]) ?? IslamicDateHelper.format(date: targetDate, isKurdish: isKurdish, isArabic: isArabic)
         let themeKey = readString(allPrefs, keys: ["theme_key"]) ?? "nuri"
 
@@ -1046,7 +815,15 @@ struct PrayerTimesWidgetEntryView: View {
         VStack(spacing: 4) {
             // Top Header: City & Pin + App Title
             HStack(alignment: .center) {
-                CitySwitchButton(cityName: entry.cityName, theme: theme, fontSize: 11, iconSize: 11, showBadge: false)
+                HStack(spacing: 3.5) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(theme.primary)
+                    Text(entry.cityName)
+                        .font(.system(size: 11.5, weight: .bold))
+                        .foregroundColor(theme.secondary)
+                        .lineLimit(1)
+                }
                 Spacer()
                 Text(appTitle)
                     .font(.system(size: 11, weight: .bold))
@@ -1135,8 +912,16 @@ struct PrayerTimesWidgetEntryView: View {
         VStack(spacing: 6) {
             // Header (Top Line)
             HStack(alignment: .center) {
-                // Right (in RTL): City + Pin + Switcher
-                CitySwitchButton(cityName: entry.cityName, theme: theme, fontSize: 12.5, iconSize: 13, showBadge: true)
+                // Right (in RTL): City + Pin
+                HStack(spacing: 4) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 12.5))
+                        .foregroundColor(theme.primary)
+                    Text(entry.cityName)
+                        .font(.system(size: 12.5, weight: .bold))
+                        .foregroundColor(theme.secondary)
+                        .lineLimit(1)
+                }
 
                 Spacer(minLength: 4)
 
@@ -1230,7 +1015,15 @@ struct PrayerTimesWidgetEntryView: View {
         VStack(spacing: 8) {
             // Top Header: City & Pin + Hijri Date + App Title
             HStack(alignment: .center) {
-                CitySwitchButton(cityName: entry.cityName, theme: theme, fontSize: 14, iconSize: 14, showBadge: true)
+                HStack(spacing: 4) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 13.5))
+                        .foregroundColor(theme.primary)
+                    Text(entry.cityName)
+                        .font(.system(size: 13.5, weight: .bold))
+                        .foregroundColor(theme.secondary)
+                        .lineLimit(1)
+                }
                 Spacer()
                 if !entry.hijriDate.isEmpty {
                     Text(entry.hijriDate)
@@ -1370,7 +1163,10 @@ struct PrayerTimesWidgetEntryView: View {
                         .font(.system(size: 12.5, weight: .heavy, design: .rounded))
                         .lineLimit(1)
                     if !entry.cityName.isEmpty {
-                        CitySwitchButtonLockScreen(cityName: entry.cityName)
+                        Text("• \(entry.cityName)")
+                            .font(.system(size: 8.5, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
                     }
                 }
                 Spacer()
