@@ -66,7 +66,7 @@ post_install do |installer|
     'Pods/Target Support Files/Pods-Runner-PrayerTimesWidget/Pods-Runner-PrayerTimesWidget.profile.xcconfig'
   ]
 
-  include_statement = '#include? "../../Flutter/Generated.xcconfig"'
+  include_statement = '#include? "../../../Flutter/Generated.xcconfig"'
 
   widget_configs.each do |config_path|
     full_path = File.join(__dir__, config_path)
