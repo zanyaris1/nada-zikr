@@ -14,6 +14,16 @@ class AzanSoundPickerSheet {
 
   static const _options = <_AzanOption>[
     _AzanOption(
+      'kurdistan',
+      'Kurdistan Adhan (Awqaf)',
+      'بانگی کوردستان (ئەوقاف)',
+      'بانگێ کوردستانێ (ئەوقاف)',
+      'Official Unified Awqaf Adhan in Kurdistan',
+      'بانگی فەرمی و یەکگرتووی ئەوقاف لە مزگەوتەکانی کوردستان',
+      'بانگێ فەرمی و یەکگرتی یێ ئەوقافێ ل مزگەفتێن کوردستانێ',
+      Icons.mosque_rounded,
+    ),
+    _AzanOption(
       'makkah',
       'Makkah Adhan',
       'بانگی مەککەی پیرۆز',

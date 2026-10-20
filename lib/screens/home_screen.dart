@@ -117,6 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     final isKurmanji = lang == 'kmr';
     final isKurdish = lang == 'ku' || lang == 'kmr';
+    final isArabic = lang == 'ar';
 
     showModalBottomSheet(
       context: context,
@@ -150,11 +151,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   isKurmanji
                       ? 'پیرۆزباهیێ ل تە دکەین!'
-                      : (isKurdish ? 'پیرۆزباییت لێ دەکەین!' : 'Congratulations!'),
+                      : (isKurdish
+                          ? 'پیرۆزباییت لێ دەکەین!'
+                          : (isArabic ? 'مبارك لك!' : 'Congratulations!')),
                   textAlign: TextAlign.center,
                   style: isKurdish
                       ? AppTheme.kurdishTitle(fontSize: 22, color: AppColors.gold)
-                      : AppTheme.englishTitle(fontSize: 22, color: AppColors.gold),
+                      : (isArabic
+                          ? AppTheme.arabicTitle(fontSize: 22, color: AppColors.gold)
+                          : AppTheme.englishTitle(fontSize: 22, color: AppColors.gold)),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -162,11 +167,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? 'تە هەر ٤ پشکێن ڕێڕەوا ڕۆژانە یا زکران بۆ ئەڤرۆ ب سەرکەفتیانە ب دووماهی ئینا. خودایێ مەزن مژارا خێر و پاداشتەکێ مەزنتر ددەتە تە.'
                       : (isKurdish
                           ? 'تەواوی 4 بەشی ڕێڕەوی ڕۆژانەی زیکرەکانت بۆ ئەمڕۆ بە سەرکەوتوویی تەواو کرد. خوای میهرەبان بەڵێنی پاداشتی زۆرترت پێ دەدات.'
-                          : 'You have successfully completed all 4 steps of your Daily Path today. May Allah reward you greatly!'),
+                          : (isArabic
+                              ? 'لقد أتممت خطوات المسار اليومي الأربعة بنجاح اليوم. تقبل الله طاعاتك وأثابك خيراً عظيماً!'
+                              : 'You have successfully completed all 4 steps of your Daily Path today. May Allah reward you greatly!')),
                   textAlign: TextAlign.center,
                   style: isKurdish
                       ? AppTheme.kurdishText(fontSize: 13, color: AppColors.cream)
-                      : AppTheme.englishText(fontSize: 13, color: AppColors.cream),
+                      : (isArabic
+                          ? AppTheme.arabicText(fontSize: 14, color: AppColors.cream)
+                          : AppTheme.englishText(fontSize: 13, color: AppColors.cream)),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
@@ -188,12 +197,17 @@ class _HomeScreenState extends State<HomeScreen> {
                             ? 'الحمد لله (سوپاس بۆ خودێ)'
                             : (isKurdish
                                 ? 'الحمد لله (سوپاس بۆ خوا)'
-                                : 'Alhamdulillah (Praise be to Allah)'),
+                                : (isArabic
+                                    ? 'الحمد لله'
+                                    : 'Alhamdulillah (Praise be to Allah)')),
                         style: isKurdish
                             ? AppTheme.kurdishTitle(
                                 fontSize: 14, color: Colors.black)
-                            : AppTheme.englishTitle(
-                                fontSize: 14, color: Colors.black),
+                            : (isArabic
+                                ? AppTheme.arabicTitle(
+                                    fontSize: 14, color: Colors.black)
+                                : AppTheme.englishTitle(
+                                    fontSize: 14, color: Colors.black)),
                       ),
                     ),
                   ),
@@ -698,12 +712,21 @@ class _HomeScreenState extends State<HomeScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                isKurmanji ? 'ڕێڕەوا ڕۆژانە' : (isKurdish ? 'ڕێڕەوی ڕۆژانە' : 'DAILY PATH'),
+                                isKurmanji
+                                    ? 'ڕێڕەوا ڕۆژانە'
+                                    : (isKurdish
+                                        ? 'ڕێڕەوی ڕۆژانە'
+                                        : (isArabic
+                                            ? 'المسار اليومي'
+                                            : 'DAILY PATH')),
                                 style: isKurdish
                                     ? AppTheme.kurdishTitle(
                                         fontSize: 14, color: AppColors.gold)
-                                    : AppTheme.labelText(
-                                        color: AppColors.mutedText),
+                                    : (isArabic
+                                        ? AppTheme.arabicTitle(
+                                            fontSize: 15, color: AppColors.gold)
+                                        : AppTheme.labelText(
+                                            color: AppColors.mutedText)),
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -729,16 +752,23 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(height: 12),
                           _buildPathItem(
-                            isKurmanji ? 'زکرێن سپێدێ' : (isKurdish ? 'زیکری بەیانیان' : 'Morning Azkar'),
+                            isKurmanji
+                                ? 'زکرێن سپێدێ'
+                                : (isKurdish
+                                    ? 'زیکری بەیانیان'
+                                    : (isArabic ? 'أذكار الصباح' : 'Morning Azkar')),
                             'أذكار الصباح',
                             _dailyPath['morning'] == true,
                             () => _openDailyCategory('morning'),
                             isKurdish,
                             isKurmanji,
+                            isArabic,
                           ),
                           const SizedBox(height: 8),
                           _buildPathItem(
-                            isKurdish ? 'تەسبیح' : 'Tasbih',
+                            isKurdish
+                                ? 'تەسبیح'
+                                : (isArabic ? 'تسبيح' : 'Tasbih'),
                             'تسبيح',
                             _dailyPath['tasbeeh'] == true,
                             () {
@@ -750,24 +780,35 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                             isKurdish,
                             isKurmanji,
+                            isArabic,
                           ),
                           const SizedBox(height: 8),
                           _buildPathItem(
-                            isKurmanji ? 'زکرێن ئێڤارێ' : (isKurdish ? 'زیکری ئێواران' : 'Evening Azkar'),
+                            isKurmanji
+                                ? 'زکرێن ئێڤارێ'
+                                : (isKurdish
+                                    ? 'زیکری ئێواران'
+                                    : (isArabic ? 'أذكار المساء' : 'Evening Azkar')),
                             'أذكار المساء',
                             _dailyPath['evening'] == true,
                             () => _openDailyCategory('evening'),
                             isKurdish,
                             isKurmanji,
+                            isArabic,
                           ),
                           const SizedBox(height: 8),
                           _buildPathItem(
-                            isKurmanji ? 'زکرێن نڤستنێ' : (isKurdish ? 'زیکری پێش خەوتن' : 'Sleep Azkar'),
+                            isKurmanji
+                                ? 'زکرێن نڤستنێ'
+                                : (isKurdish
+                                    ? 'زیکری پێش خەوتن'
+                                    : (isArabic ? 'أذكار النوم' : 'Sleep Azkar')),
                             'أذكار النوم',
                             _dailyPath['sleep'] == true,
                             () => _openDailyCategory('sleep'),
                             isKurdish,
                             isKurmanji,
+                            isArabic,
                           ),
                           if (['morning', 'tasbeeh', 'evening', 'sleep'].where((step) => _dailyPath[step] == true).length == 4)
                             Container(
@@ -803,12 +844,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                               ? 'پیرۆزە! تە ڕێڕەوا ڕۆژانە ۱۰۰٪ ب دووماهی ئینا'
                                               : (isKurdish
                                                   ? 'پیرۆزە! ڕێڕەوی ڕۆژانەت ۱۰۰٪ تەواو کرد'
-                                                  : 'Daily Path 100% Completed!'),
+                                                  : (isArabic
+                                                      ? 'مبارك! أتممت المسار اليومي 100%'
+                                                      : 'Daily Path 100% Completed!')),
                                           style: isKurdish
                                               ? AppTheme.kurdishTitle(
                                                   fontSize: 13, color: AppColors.gold)
-                                              : AppTheme.englishTitle(
-                                                  fontSize: 13, color: AppColors.gold),
+                                              : (isArabic
+                                                  ? AppTheme.arabicTitle(
+                                                      fontSize: 14, color: AppColors.gold)
+                                                  : AppTheme.englishTitle(
+                                                      fontSize: 13, color: AppColors.gold)),
                                         ),
                                         const SizedBox(height: 3),
                                         Text(
@@ -816,12 +862,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                               ? 'خودایێ مەزن خێر و پاداشتێ مەزن بدەتە تە و زکرێن تە قەبوول بکەت'
                                               : (isKurdish
                                                   ? 'خوای گەورە پاداشتی خێرت بداتەوە و زیکرەکانت لێ قبوڵ بکات'
-                                                  : 'May Allah accept your daily zikr and reward you immensely!'),
+                                                  : (isArabic
+                                                      ? 'تقبل الله ذكرك وطاعاتك وضاعف أجرك وأثابك خيراً'
+                                                      : 'May Allah accept your daily zikr and reward you immensely!')),
                                           style: isKurdish
                                               ? AppTheme.kurdishText(
                                                   fontSize: 11, color: AppColors.cream)
-                                              : AppTheme.englishText(
-                                                  fontSize: 11, color: AppColors.cream),
+                                              : (isArabic
+                                                  ? AppTheme.arabicText(
+                                                      fontSize: 12, color: AppColors.cream)
+                                                  : AppTheme.englishText(
+                                                      fontSize: 11, color: AppColors.cream)),
                                         ),
                                       ],
                                     ),
@@ -843,12 +894,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isKurdish ? 'بەشە خێراکان' : 'QUICK ACCESS',
+                            isKurdish
+                                ? 'بەشە خێراکان'
+                                : (isArabic ? 'الوصول السريع' : 'QUICK ACCESS'),
                             style: isKurdish
                                 ? AppTheme.kurdishTitle(
                                     fontSize: 14, color: AppColors.gold)
-                                : AppTheme.labelText(
-                                    color: AppColors.mutedText),
+                                : (isArabic
+                                    ? AppTheme.arabicTitle(
+                                        fontSize: 15, color: AppColors.gold)
+                                    : AppTheme.labelText(
+                                        color: AppColors.mutedText)),
                           ),
                           const SizedBox(height: 12),
                           GridView.count(
@@ -882,6 +938,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 icon: Icons.stars_rounded,
                                 accentColor: AppColors.gold,
                                 isKurdish: isKurdish,
+                                isArabic: isArabic,
                                 imagePath: 'assets/images/quick_names_of_allah.jpg',
                                 onTap: () {
                                   Navigator.push(
@@ -914,6 +971,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 icon: Icons.auto_stories_rounded,
                                 accentColor: const Color(0xFF10B981),
                                 isKurdish: isKurdish,
+                                isArabic: isArabic,
                                 imagePath: 'assets/images/quick_all_zikr.jpg',
                                 onTap: () {
                                   Navigator.push(
@@ -946,6 +1004,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 icon: Icons.explore_rounded,
                                 accentColor: const Color(0xFF0EA5E9),
                                 isKurdish: isKurdish,
+                                isArabic: isArabic,
                                 imagePath: 'assets/images/quick_qibla_compass.jpg',
                                 onTap: () async {
                                   final schedule = await PrayerRepository
@@ -1000,6 +1059,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 icon: Icons.local_fire_department_rounded,
                                 accentColor: AppColors.fireOrange,
                                 isKurdish: isKurdish,
+                                isArabic: isArabic,
                                 imagePath: 'assets/images/quick_streak_stats.jpg',
                                 onTap: () {
                                   Navigator.push(
@@ -1211,7 +1271,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(width: 4),
                       Icon(
-                        isKurdish
+                        (isKurdish || lang == 'ar')
                             ? Icons.arrow_back_ios_new_rounded
                             : Icons.arrow_forward_ios_rounded,
                         size: 10,
@@ -1903,7 +1963,7 @@ class _MoodVerseCardState extends State<_MoodVerseCard> {
 }
 
 Widget _buildPathItem(String label, String arabic, bool done,
-    VoidCallback onTap, bool isKurdish, [bool isKurmanji = false]) {
+    VoidCallback onTap, bool isKurdish, [bool isKurmanji = false, bool isArabic = false]) {
   return GestureDetector(
     onTap: onTap,
     child: Container(
@@ -1942,12 +2002,25 @@ Widget _buildPathItem(String label, String arabic, bool done,
                   ? AppTheme.kurdishText(
                       color: done ? AppColors.faintText : AppColors.cream,
                       fontSize: 13)
-                  : AppTheme.englishText(
-                      color: done ? AppColors.faintText : AppColors.cream,
-                      fontSize: 13),
+                  : (isArabic
+                      ? AppTheme.arabicTitle(
+                          color: done ? AppColors.faintText : AppColors.cream,
+                          fontSize: 14)
+                      : AppTheme.englishText(
+                          color: done ? AppColors.faintText : AppColors.cream,
+                          fontSize: 13)),
             ),
           ),
-          if (!isKurdish && arabic.isNotEmpty)
+          if (isArabic)
+            Text(
+              done ? 'مكتمل ✓' : 'قراءة',
+              style: AppTheme.arabicText(
+                  color: done
+                      ? AppColors.gold.withValues(alpha: 0.5)
+                      : AppColors.gold,
+                  fontSize: 12),
+            )
+          else if (!isKurdish && arabic.isNotEmpty)
             Text(
               arabic,
               style: AppTheme.arabicText(
@@ -1978,6 +2051,7 @@ Widget _buildQuickCard({
   required IconData icon,
   required Color accentColor,
   required bool isKurdish,
+  bool isArabic = false,
   required String imagePath,
   VoidCallback? onTap,
   String? badgeText,
@@ -2039,8 +2113,8 @@ Widget _buildQuickCard({
           // Accent bottom glow
           Positioned(
             bottom: -20,
-            left: isKurdish ? null : -20,
-            right: isKurdish ? -20 : null,
+            left: (isKurdish || isArabic) ? null : -20,
+            right: (isKurdish || isArabic) ? -20 : null,
             child: Container(
               width: 80,
               height: 80,
@@ -2102,10 +2176,15 @@ Widget _buildQuickCard({
                                       color: primaryTextColor,
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold)
-                                  : AppTheme.englishText(
-                                      color: primaryTextColor,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold),
+                                  : (isArabic
+                                      ? AppTheme.arabicText(
+                                          color: primaryTextColor,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold)
+                                      : AppTheme.englishText(
+                                          color: primaryTextColor,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ),
@@ -2122,10 +2201,13 @@ Widget _buildQuickCard({
                       style: isKurdish
                           ? AppTheme.kurdishTitle(
                               fontSize: 13.5, color: primaryTextColor)
-                          : AppTheme.englishTitle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.bold,
-                              color: primaryTextColor),
+                          : (isArabic
+                              ? AppTheme.arabicTitle(
+                                  fontSize: 13.5, color: primaryTextColor)
+                              : AppTheme.englishTitle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: primaryTextColor)),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -2135,8 +2217,11 @@ Widget _buildQuickCard({
                       style: isKurdish
                           ? AppTheme.kurdishText(
                               color: secondaryTextColor, fontSize: 11)
-                          : AppTheme.englishText(
-                              color: secondaryTextColor, fontSize: 11),
+                          : (isArabic
+                              ? AppTheme.arabicText(
+                                  color: secondaryTextColor, fontSize: 11)
+                              : AppTheme.englishText(
+                                  color: secondaryTextColor, fontSize: 11)),
                     ),
                   ],
                 ),

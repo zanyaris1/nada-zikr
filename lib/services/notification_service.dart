@@ -251,7 +251,7 @@ class NotificationService {
           // If mode is 'azan', ensure we have a valid audible sound even if global soundId was silent/vibrate
           final effectiveSoundId = (item.id == 'fajr' && fajrSoundId == 'azan_fajr')
               ? 'azan_fajr'
-              : ((soundId == 'silent' || soundId == 'vibrate') ? 'makkah' : soundId);
+              : ((soundId == 'silent' || soundId == 'vibrate') ? 'kurdistan' : soundId);
 
           if (scheduledDate.isAfter(nowInLoc)) {
             pendingAlarms.add(_PendingAlarm(
@@ -414,7 +414,7 @@ class NotificationService {
   }) async {
     // Resolve sound fallback: if per-prayer mode is 'azan', ensure we have a valid audio sound
     final safeSound = (soundId == 'silent' || soundId == 'vibrate')
-        ? 'makkah'
+        ? 'kurdistan'
         : AzanAudioService.resolveSafeSoundId(soundId);
     final resourceName = _androidSoundResource(safeSound);
 
@@ -708,7 +708,7 @@ class NotificationService {
   static String _androidSoundResource(String soundId) {
     final safeId = AzanAudioService.resolveSafeSoundId(soundId);
     if (safeId == 'silent' || safeId == 'vibrate') {
-      return 'makkah';
+      return 'kurdistan';
     }
     return safeId.replaceAll('-', '_');
   }
@@ -769,7 +769,7 @@ class NotificationService {
     final isSilent = soundId == 'silent';
     final isVibrate = soundId == 'vibrate';
     final safeSound = (isSilent || isVibrate)
-        ? 'makkah'
+        ? 'kurdistan'
         : AzanAudioService.resolveSafeSoundId(soundId);
     final resourceName = _androidSoundResource(safeSound);
 

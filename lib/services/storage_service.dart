@@ -269,6 +269,7 @@ class StorageService {
   }
 
   static const Set<String> _validAzanSoundIds = {
+    'kurdistan',
     'makkah',
     'haram_classic',
     'madinah',
@@ -284,11 +285,11 @@ class StorageService {
   };
 
   static String normalizeAzanSoundId(String? soundId) {
-    final normalized = soundId?.trim().toLowerCase() ?? 'makkah';
+    final normalized = soundId?.trim().toLowerCase() ?? 'kurdistan';
     if (_validAzanSoundIds.contains(normalized)) {
       return normalized;
     }
-    return 'makkah';
+    return 'kurdistan';
   }
 
   // Azan Sound Preference
@@ -300,7 +301,7 @@ class StorageService {
 
   static Future<String> getAzanSound() async {
     final box = Hive.box(settingsBox);
-    final storedValue = box.get('azan_sound', defaultValue: 'makkah');
+    final storedValue = box.get('azan_sound', defaultValue: 'kurdistan');
     return normalizeAzanSoundId(storedValue?.toString());
   }
 

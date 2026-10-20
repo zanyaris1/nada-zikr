@@ -67,7 +67,7 @@ class _PrayerSettingsSheetState extends State<PrayerSettingsSheet>
     _offsets = Map<String, int>.from(StorageService.getPrayerMinuteOffsets());
     _selectedHijriOffset = StorageService.getPrayerHijriOffset();
     _selectedPreAzanMinutes = StorageService.getPreAzanReminderMinutes();
-    _selectedAzanSound = 'makkah';
+    _selectedAzanSound = 'kurdistan';
 
     _loadInitialAzanSound();
     _recalculatePreview();
@@ -864,6 +864,7 @@ class _PrayerSettingsSheetState extends State<PrayerSettingsSheet>
     const reminderOptions = [0, 5, 10, 15, 20, 30];
 
     const azanSounds = [
+      {'id': 'kurdistan', 'nameKmr': 'بانگێ کوردستانێ (ئەوقاف)', 'nameKu': 'بانگی کوردستان (ئەوقاف)', 'nameAr': 'أذان كردستان (الأوقاف الموحد)', 'nameEn': 'Kurdistan Adhan (Awqaf)'},
       {'id': 'makkah', 'nameKmr': 'بانگێ مەککەیا پیرۆز', 'nameKu': 'بانگی مەککەی پیرۆز', 'nameAr': 'أذان مكة المكرمة', 'nameEn': 'Makkah Adhan'},
       {'id': 'madinah', 'nameKmr': 'بانگێ مەدینەیا منەوەرە', 'nameKu': 'بانگی مەدینەی منەوەرە', 'nameAr': 'أذان المدينة المنورة', 'nameEn': 'Madinah Adhan'},
       {'id': 'aqsa', 'nameKmr': 'بانگێ مزگەفتا ئەقسا', 'nameKu': 'بانگی مزگەوتی ئەقسا', 'nameAr': 'أذان المسجد الأقصى', 'nameEn': 'Al-Aqsa Adhan'},

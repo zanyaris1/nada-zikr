@@ -128,7 +128,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
     if (next == 'azan') {
       final currentSound = await StorageService.getAzanSound();
       if (currentSound == 'silent' || currentSound == 'vibrate') {
-        await StorageService.saveAzanSound('makkah');
+        await StorageService.saveAzanSound('kurdistan');
       }
     }
     await NotificationService.rescheduleUpcomingPrayerAzans();
