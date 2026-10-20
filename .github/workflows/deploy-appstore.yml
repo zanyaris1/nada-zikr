@@ -112,12 +112,15 @@ jobs:
             export CERTIFICATE_PRIVATE_KEY=$(cat cert_key.pem)
           fi
 
+          export CERTIFICATE_PRIVATE_KEY="$CERTIFICATE_PRIVATE_KEY"
+
           echo "Fetching code signing files for Main App..."
           app-store-connect fetch-signing-files "com.nada.nadaZikrakanm" \
             --type IOS_APP_STORE \
             --key-id "$KEY_ID" \
             --issuer-id "$ISSUER_ID" \
             --private-key "$PRIVATE_KEY" \
+            --certificate-key "@env:CERTIFICATE_PRIVATE_KEY" \
             --create
 
           echo "Fetching code signing files for Prayer Times Widget Extension..."
@@ -126,6 +129,7 @@ jobs:
             --key-id "$KEY_ID" \
             --issuer-id "$ISSUER_ID" \
             --private-key "$PRIVATE_KEY" \
+            --certificate-key "@env:CERTIFICATE_PRIVATE_KEY" \
             --create
 
       - name: Add Certificates to Keychain
