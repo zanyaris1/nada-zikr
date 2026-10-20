@@ -858,7 +858,7 @@ struct PrayerTimesWidgetEntryView: View {
                             .foregroundColor(theme.primary)
                             .lineLimit(1)
                     } else {
-                        Text(entry.liveRemainingText.isEmpty ? (entry.isKurdish ? "کاتی بانگە" : "Now") : entry.liveRemainingText)
+                        Text(entry.liveRemainingText.isEmpty ? (entry.isKurdish ? "کاتی بانگە" : (entry.isArabic ? "حان الآن" : "Now")) : entry.liveRemainingText)
                             .font(.system(size: 9.5, weight: .bold))
                             .foregroundColor(theme.primary)
                             .lineLimit(1)
@@ -972,7 +972,7 @@ struct PrayerTimesWidgetEntryView: View {
                             .foregroundColor(theme.primary)
                             .lineLimit(1)
                     } else {
-                        Text(entry.liveRemainingText.isEmpty ? (entry.isKurdish ? "کاتی بانگە" : "Now") : entry.liveRemainingText)
+                        Text(entry.liveRemainingText.isEmpty ? (entry.isKurdish ? "کاتی بانگە" : (entry.isArabic ? "حان الآن" : "Now")) : entry.liveRemainingText)
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(theme.primary)
                             .lineLimit(1)
@@ -1036,7 +1036,7 @@ struct PrayerTimesWidgetEntryView: View {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 4) {
-                        Text(entry.isKurdish ? "بانگی داهاتوو:" : "Next Prayer:")
+                        Text(entry.isKurdish ? "بانگی داهاتوو:" : (entry.isArabic ? "الصلاة القادمة:" : "Next Prayer:"))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(theme.secondary.opacity(0.85))
                         Text(cleanNextPrayerName)
