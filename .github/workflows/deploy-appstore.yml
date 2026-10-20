@@ -132,9 +132,48 @@ jobs:
         run: |
           keychain add-certificates
 
+      - name: Install Provisioning Profiles to System (MobileDevice)
+        run: |
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_DIR"
+          mkdir -p "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+
+          find "$HOME/Library" -name "*.mobileprovision" 2>/dev/null | while read -r f; do
+            echo "Installing profile: $f"
+            cp -f "$f" "$PROFILES_DIR/"
+            cp -f "$f" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/"
+            
+            UUID=$(security cms -D -i "$f" 2>/dev/null | grep -A1 '<key>UUID</key>' | grep '<string>' | sed -E 's/.*<string>(.*)<\/string>.*/\1/' || true)
+            NAME=$(security cms -D -i "$f" 2>/dev/null | grep -A1 '<key>Name</key>' | grep '<string>' | sed -E 's/.*<string>(.*)<\/string>.*/\1/' || true)
+
+            if [ -n "$UUID" ]; then
+              echo "  -> Mapped UUID: $UUID"
+              cp -f "$f" "$PROFILES_DIR/${UUID}.mobileprovision"
+              cp -f "$f" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/${UUID}.mobileprovision"
+            fi
+            if [ -n "$NAME" ]; then
+              echo "  -> Mapped Name: $NAME"
+              cp -f "$f" "$PROFILES_DIR/${NAME}.mobileprovision"
+              cp -f "$f" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/${NAME}.mobileprovision"
+            fi
+          done
+
+          echo "Provisioning Profiles in $PROFILES_DIR:"
+          ls -lah "$PROFILES_DIR"
+
       - name: Apply Provisioning Profiles to Xcode Project
         run: |
           xcode-project use-profiles --export-options-plist=$HOME/export_options.plist
+
+          # Re-sync any profiles to MobileDevice folder
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          find "$HOME/Library" -name "*.mobileprovision" 2>/dev/null | while read -r f; do
+            cp -f "$f" "$PROFILES_DIR/"
+            UUID=$(security cms -D -i "$f" 2>/dev/null | grep -A1 '<key>UUID</key>' | grep '<string>' | sed -E 's/.*<string>(.*)<\/string>.*/\1/' || true)
+            NAME=$(security cms -D -i "$f" 2>/dev/null | grep -A1 '<key>Name</key>' | grep '<string>' | sed -E 's/.*<string>(.*)<\/string>.*/\1/' || true)
+            [ -n "$UUID" ] && cp -f "$f" "$PROFILES_DIR/${UUID}.mobileprovision"
+            [ -n "$NAME" ] && cp -f "$f" "$PROFILES_DIR/${NAME}.mobileprovision"
+          done
 
       - name: Install Flutter Dependencies
         run: |
