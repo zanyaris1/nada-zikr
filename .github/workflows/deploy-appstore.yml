@@ -85,11 +85,26 @@ jobs:
 
       - name: Fetch Apple Signing Certificates & Profiles
         env:
-          APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER || secrets.APP_STORE_CONNECT_KEY_ID || secrets.APPSTORE_KEY_ID || secrets.KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID || secrets.APPSTORE_ISSUER_ID || secrets.ISSUER_ID }}
+          PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY || secrets.APP_STORE_CONNECT_API_KEY || secrets.APPSTORE_PRIVATE_KEY || secrets.PRIVATE_KEY }}
           CERTIFICATE_PRIVATE_KEY: ${{ secrets.CERTIFICATE_PRIVATE_KEY }}
         run: |
+          # Check that required secrets are set
+          if [ -z "$KEY_ID" ] || [ -z "$ISSUER_ID" ] || [ -z "$PRIVATE_KEY" ]; then
+            echo "::error::Missing App Store Connect credentials in GitHub Secrets!"
+            echo "Please go to: GitHub Repo -> Settings -> Secrets and variables -> Actions -> Repository Secrets"
+            [ -z "$KEY_ID" ] && echo "  ❌ APP_STORE_CONNECT_KEY_IDENTIFIER is empty or missing"
+            [ -z "$ISSUER_ID" ] && echo "  ❌ APP_STORE_CONNECT_ISSUER_ID is empty or missing"
+            [ -z "$PRIVATE_KEY" ] && echo "  ❌ APP_STORE_CONNECT_PRIVATE_KEY is empty or missing"
+            echo "NOTE: Make sure secrets are added under 'Repository secrets', NOT 'Environment secrets'!"
+            exit 1
+          fi
+
+          export APP_STORE_CONNECT_KEY_IDENTIFIER="$KEY_ID"
+          export APP_STORE_CONNECT_ISSUER_ID="$ISSUER_ID"
+          export APP_STORE_CONNECT_PRIVATE_KEY="$PRIVATE_KEY"
+
           # If no CERTIFICATE_PRIVATE_KEY secret is provided, generate a 2048-bit RSA key dynamically
           if [ -z "$CERTIFICATE_PRIVATE_KEY" ]; then
             echo "Generating temporary RSA 2048 key for certificate..."
@@ -100,11 +115,17 @@ jobs:
           echo "Fetching code signing files for Main App..."
           app-store-connect fetch-signing-files "com.nada.nadaZikrakanm" \
             --type IOS_APP_STORE \
+            --key-id "$KEY_ID" \
+            --issuer-id "$ISSUER_ID" \
+            --private-key "$PRIVATE_KEY" \
             --create
 
           echo "Fetching code signing files for Prayer Times Widget Extension..."
           app-store-connect fetch-signing-files "com.nada.nadaZikrakanm.PrayerTimesWidget" \
             --type IOS_APP_STORE \
+            --key-id "$KEY_ID" \
+            --issuer-id "$ISSUER_ID" \
+            --private-key "$PRIVATE_KEY" \
             --create
 
       - name: Add Certificates to Keychain
@@ -141,14 +162,14 @@ jobs:
 
       - name: Upload to Apple App Store Connect / TestFlight
         env:
-          APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER || secrets.APP_STORE_CONNECT_KEY_ID || secrets.APPSTORE_KEY_ID || secrets.KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID || secrets.APPSTORE_ISSUER_ID || secrets.ISSUER_ID }}
+          PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY || secrets.APP_STORE_CONNECT_API_KEY || secrets.APPSTORE_PRIVATE_KEY || secrets.PRIVATE_KEY }}
         run: |
           mkdir -p ~/.appstoreconnect/private_keys ~/.private_keys
-          printf "%s\n" "$APP_STORE_CONNECT_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8
-          printf "%s\n" "$APP_STORE_CONNECT_PRIVATE_KEY" > ~/.private_keys/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8
-          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8 ~/.private_keys/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8
+          printf "%s\n" "$PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+          printf "%s\n" "$PRIVATE_KEY" > ~/.private_keys/AuthKey_${KEY_ID}.p8
+          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8 ~/.private_keys/AuthKey_${KEY_ID}.p8
 
           IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -n 1)
           if [ -z "$IPA_PATH" ]; then
@@ -160,8 +181,8 @@ jobs:
           xcrun altool --upload-app \
             -f "$IPA_PATH" \
             -t ios \
-            --apiKey "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
-            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+            --apiKey "$KEY_ID" \
+            --apiIssuer "$ISSUER_ID"
 
       - name: Workflow Summary
         if: always()
