@@ -92,7 +92,7 @@ class DhikrPackageService {
     if (_categories != null) return _categories!;
 
     final raw =
-        await rootBundle.loadString('node_modules/imanikurd/data/dhikr.json');
+        await rootBundle.loadString('assets/data/dhikr.json');
     final data = json.decode(raw) as Map<String, dynamic>;
     final grouped = <int, List<Azkar>>{};
 
