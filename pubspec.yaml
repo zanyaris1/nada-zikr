@@ -60,9 +60,7 @@ flutter:
     - assets/quran/
     - assets/quran/tafsir/
     - assets/hadith/
-    - node_modules/imanikurd/data/dhikr.json
-    - node_modules/imanikurd/data/names_of_allah.json
-    - node_modules/imanikurd-prayer/data/prayer_times.json
+    - assets/data/
 
 flutter_launcher_icons:
   android: true
