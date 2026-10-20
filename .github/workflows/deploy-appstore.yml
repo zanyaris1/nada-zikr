@@ -140,30 +140,27 @@ jobs:
         run: |
           PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PROFILES_DIR"
-          mkdir -p "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
 
-          find "$HOME/Library" -name "*.mobileprovision" 2>/dev/null | while read -r f; do
+          for f in "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"/*.mobileprovision; do
+            [ -f "$f" ] || continue
             echo "Installing profile: $f"
-            cp -f "$f" "$PROFILES_DIR/"
-            cp -f "$f" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/"
+            cp -f "$f" "$PROFILES_DIR/" || true
             
             UUID=$(security cms -D -i "$f" 2>/dev/null | grep -A1 '<key>UUID</key>' | grep '<string>' | sed -E 's/.*<string>(.*)<\/string>.*/\1/' || true)
             NAME=$(security cms -D -i "$f" 2>/dev/null | grep -A1 '<key>Name</key>' | grep '<string>' | sed -E 's/.*<string>(.*)<\/string>.*/\1/' || true)
 
             if [ -n "$UUID" ]; then
               echo "  -> Mapped UUID: $UUID"
-              cp -f "$f" "$PROFILES_DIR/${UUID}.mobileprovision"
-              cp -f "$f" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/${UUID}.mobileprovision"
+              cp -f "$f" "$PROFILES_DIR/${UUID}.mobileprovision" || true
             fi
             if [ -n "$NAME" ]; then
               echo "  -> Mapped Name: $NAME"
-              cp -f "$f" "$PROFILES_DIR/${NAME}.mobileprovision"
-              cp -f "$f" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/${NAME}.mobileprovision"
+              cp -f "$f" "$PROFILES_DIR/${NAME}.mobileprovision" || true
             fi
           done
 
           echo "Provisioning Profiles in $PROFILES_DIR:"
-          ls -lah "$PROFILES_DIR"
+          ls -lah "$PROFILES_DIR" || true
 
       - name: Apply Provisioning Profiles to Xcode Project
         run: |
@@ -171,12 +168,13 @@ jobs:
 
           # Re-sync any profiles to MobileDevice folder
           PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
-          find "$HOME/Library" -name "*.mobileprovision" 2>/dev/null | while read -r f; do
-            cp -f "$f" "$PROFILES_DIR/"
+          for f in "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"/*.mobileprovision; do
+            [ -f "$f" ] || continue
+            cp -f "$f" "$PROFILES_DIR/" || true
             UUID=$(security cms -D -i "$f" 2>/dev/null | grep -A1 '<key>UUID</key>' | grep '<string>' | sed -E 's/.*<string>(.*)<\/string>.*/\1/' || true)
             NAME=$(security cms -D -i "$f" 2>/dev/null | grep -A1 '<key>Name</key>' | grep '<string>' | sed -E 's/.*<string>(.*)<\/string>.*/\1/' || true)
-            [ -n "$UUID" ] && cp -f "$f" "$PROFILES_DIR/${UUID}.mobileprovision"
-            [ -n "$NAME" ] && cp -f "$f" "$PROFILES_DIR/${NAME}.mobileprovision"
+            [ -n "$UUID" ] && cp -f "$f" "$PROFILES_DIR/${UUID}.mobileprovision" || true
+            [ -n "$NAME" ] && cp -f "$f" "$PROFILES_DIR/${NAME}.mobileprovision" || true
           done
 
       - name: Install Flutter Dependencies
