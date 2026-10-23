@@ -70,13 +70,23 @@ class _LocationSelectorSheetState extends State<LocationSelectorSheet> {
 
     if (!locRes.isGpsSuccess && mounted) {
       final isKurmanji = widget.locale == 'kmr';
+      final isKurdish = widget.locale == 'ku' || isKurmanji;
+      final isArabic = widget.locale == 'ar';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            locRes.errorMessage ?? (isKurmanji
+            isKurmanji
                 ? 'دەستهەلاتا جوگرافی (GPS) نەهاتیە دان. جهـ هاتە خەملاندن بۆ ${locRes.nearestCity.displayName(widget.locale)}.'
-                : 'دەسەڵاتی جوگرافیا (GPS) ڕێگەنەدراوە. شوێن خەمڵێنرا بۆ ${locRes.nearestCity.displayName(widget.locale)}.'),
-            style: AppTheme.kurdishText(color: Colors.white, fontSize: 13),
+                : (isKurdish
+                    ? 'دەسەڵاتی جوگرافیا (GPS) ڕێگەنەدراوە. شوێن خەمڵێنرا بۆ ${locRes.nearestCity.displayName(widget.locale)}.'
+                    : (isArabic
+                        ? 'لم يتم منح إذن الموقع (GPS). تم تحديد الموقع تلقائياً إلى ${locRes.nearestCity.displayName(widget.locale)}.'
+                        : 'GPS permission was not granted. Estimated location set to ${locRes.nearestCity.displayName(widget.locale)}.')),
+            style: isKurdish
+                ? AppTheme.kurdishText(color: Colors.white, fontSize: 13)
+                : (isArabic
+                    ? AppTheme.arabicText(color: Colors.white, fontSize: 13)
+                    : AppTheme.englishText(color: Colors.white, fontSize: 13)),
           ),
           backgroundColor: AppColors.gold,
         ),
@@ -123,8 +133,9 @@ class _LocationSelectorSheetState extends State<LocationSelectorSheet> {
   @override
   Widget build(BuildContext context) {
     final isKurmanji = widget.locale == 'kmr';
-    final isKurdish = widget.locale == 'ku' || widget.locale == 'kmr';
-    final isRtl = widget.locale == 'ku' || widget.locale == 'kmr' || widget.locale == 'ar';
+    final isKurdish = widget.locale == 'ku' || isKurmanji;
+    final isArabic = widget.locale == 'ar';
+    final isRtl = isKurdish || isArabic;
 
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
@@ -163,8 +174,14 @@ class _LocationSelectorSheetState extends State<LocationSelectorSheet> {
                 Text(
                   isKurmanji
                       ? 'جهـ و باژێری هەلبژێڕە'
-                      : (isKurdish ? 'شوێن و شار هەڵبژێرە' : 'Select Location & City'),
-                  style: AppTheme.kurdishTitle(fontSize: 20, color: AppColors.gold),
+                      : (isKurdish
+                          ? 'شوێن و شار هەڵبژێرە'
+                          : (isArabic ? 'اختر الموقع والمدينة' : 'Select Location & City')),
+                  style: isKurdish
+                      ? AppTheme.kurdishTitle(fontSize: 20, color: AppColors.gold)
+                      : (isArabic
+                          ? AppTheme.arabicTitle(fontSize: 20, color: AppColors.gold)
+                          : AppTheme.englishTitle(fontSize: 18, color: AppColors.gold)),
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
@@ -180,12 +197,22 @@ class _LocationSelectorSheetState extends State<LocationSelectorSheet> {
             child: TextField(
               controller: _searchController,
               textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
-              style: AppTheme.englishText(color: AppColors.cream, fontSize: 14),
+              style: isKurdish
+                  ? AppTheme.kurdishText(color: AppColors.cream, fontSize: 14)
+                  : (isArabic
+                      ? AppTheme.arabicText(color: AppColors.cream, fontSize: 14)
+                      : AppTheme.englishText(color: AppColors.cream, fontSize: 14)),
               decoration: InputDecoration(
                 hintText: isKurmanji
                     ? 'ل باژێرێ دلخواز بگەڕە...'
-                    : (isKurdish ? 'گەڕان بۆ شاری دڵخواز...' : 'Search city or country...'),
-                hintStyle: AppTheme.kurdishText(fontSize: 13, color: AppColors.faintText),
+                    : (isKurdish
+                        ? 'گەڕان بۆ شاری دڵخواز...'
+                        : (isArabic ? 'ابحث عن المدينة أو الدولة...' : 'Search city or country...')),
+                hintStyle: isKurdish
+                    ? AppTheme.kurdishText(fontSize: 13, color: AppColors.faintText)
+                    : (isArabic
+                        ? AppTheme.arabicText(fontSize: 13, color: AppColors.faintText)
+                        : AppTheme.englishText(fontSize: 13, color: AppColors.faintText)),
                 prefixIcon: Icon(Icons.search_rounded, color: AppColors.gold),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -211,7 +238,9 @@ class _LocationSelectorSheetState extends State<LocationSelectorSheet> {
           const Divider(color: Colors.white10, height: 16),
 
           Expanded(
-            child: _searchQuery.isNotEmpty ? _buildSearchResultsList(isKurdish, isKurmanji) : _buildHierarchicalList(isKurdish, isKurmanji),
+            child: _searchQuery.isNotEmpty
+                ? _buildSearchResultsList(isKurdish, isKurmanji, isArabic)
+                : _buildHierarchicalList(isKurdish, isKurmanji, isArabic),
           ),
         ],
       ),
@@ -219,15 +248,21 @@ class _LocationSelectorSheetState extends State<LocationSelectorSheet> {
   );
   }
 
-  Widget _buildSearchResultsList(bool isKurdish, bool isKurmanji) {
+  Widget _buildSearchResultsList(bool isKurdish, bool isKurmanji, bool isArabic) {
     final results = _filteredCities;
     if (results.isEmpty) {
       return Center(
         child: Text(
           isKurmanji
               ? 'چ باژێر نەهاتنە دیتن.'
-              : (isKurdish ? 'هیچ شارێک نەدۆزرایەوە.' : 'No city found.'),
-          style: AppTheme.kurdishText(fontSize: 14, color: AppColors.faintText),
+              : (isKurdish
+                  ? 'هیچ شارێک نەدۆزرایەوە.'
+                  : (isArabic ? 'لم يتم العثور على أي مدينة.' : 'No city found.')),
+          style: isKurdish
+              ? AppTheme.kurdishText(fontSize: 14, color: AppColors.faintText)
+              : (isArabic
+                  ? AppTheme.arabicText(fontSize: 14, color: AppColors.faintText)
+                  : AppTheme.englishText(fontSize: 14, color: AppColors.faintText)),
         ),
       );
     }
@@ -238,12 +273,12 @@ class _LocationSelectorSheetState extends State<LocationSelectorSheet> {
       itemBuilder: (context, index) {
         final city = results[index];
         final isSelected = _currentMode == 'preset' && _currentCityId == city.id;
-        return _buildCityTile(city, isSelected, isKurdish, isKurmanji);
+        return _buildCityTile(city, isSelected, isKurdish, isKurmanji, isArabic);
       },
     );
   }
 
-  Widget _buildHierarchicalList(bool isKurdish, bool isKurmanji) {
+  Widget _buildHierarchicalList(bool isKurdish, bool isKurmanji, bool isArabic) {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       children: [
@@ -266,18 +301,39 @@ class _LocationSelectorSheetState extends State<LocationSelectorSheet> {
             title: Text(
               isKurmanji
                   ? 'دیاریکردنا جهی ب جی پی ئێس (GPS)'
-                  : (isKurdish ? 'دیاریکردنی شوێن بە جی پی ئێس (GPS)' : 'Live GPS Auto Detect'),
-              style: AppTheme.kurdishText(
-                fontSize: 14,
-                color: _currentMode == 'gps' ? AppColors.gold : AppColors.cream,
-                fontWeight: FontWeight.bold,
-              ),
+                  : (isKurdish
+                      ? 'دیاریکردنی شوێن بە جی پی ئێس (GPS)'
+                      : (isArabic ? 'تحديد الموقع المباشر عبر (GPS)' : 'Live GPS Auto Detect')),
+              style: isKurdish
+                  ? AppTheme.kurdishText(
+                      fontSize: 14,
+                      color: _currentMode == 'gps' ? AppColors.gold : AppColors.cream,
+                      fontWeight: FontWeight.bold,
+                    )
+                  : (isArabic
+                      ? AppTheme.arabicTitle(
+                          fontSize: 14,
+                          color: _currentMode == 'gps' ? AppColors.gold : AppColors.cream,
+                        )
+                      : AppTheme.englishText(
+                          fontSize: 14,
+                          color: _currentMode == 'gps' ? AppColors.gold : AppColors.cream,
+                          fontWeight: FontWeight.bold,
+                        )),
             ),
             subtitle: Text(
               isKurmanji
                   ? 'دەمێ بانگی ل دویڤ جهێ تە یێ دروست و ڕاستەوخۆ دهێتە هژمارتن'
-                  : (isKurdish ? 'کاتی بانگ بەپێی شوێنی وورد و ڕاستەوخۆت حیساب دەکرێت' : 'Exact local coordinates via GPS'),
-              style: AppTheme.kurdishText(fontSize: 11, color: AppColors.faintText),
+                  : (isKurdish
+                      ? 'کاتی بانگ بەپێی شوێنی وورد و ڕاستەوخۆت حیساب دەکرێت'
+                      : (isArabic
+                          ? 'حساب أوقات الصلاة بدقة بناءً على موقعك المباشر'
+                          : 'Exact local coordinates via GPS')),
+              style: isKurdish
+                  ? AppTheme.kurdishText(fontSize: 11, color: AppColors.faintText)
+                  : (isArabic
+                      ? AppTheme.arabicText(fontSize: 11, color: AppColors.faintText)
+                      : AppTheme.englishText(fontSize: 11, color: AppColors.faintText)),
             ),
             trailing: _isGpsLoading
                 ? SizedBox(
@@ -295,18 +351,24 @@ class _LocationSelectorSheetState extends State<LocationSelectorSheet> {
           child: Text(
             isKurmanji
                 ? 'هەلبژارتنا باژێری ل دویڤ وەلاتان:'
-                : (isKurdish ? 'هەڵبژاردنی شار بەپێی وڵات:' : 'Select city by country:'),
-            style: AppTheme.kurdishTitle(fontSize: 14, color: AppColors.gold),
+                : (isKurdish
+                    ? 'هەڵبژاردنی شار بەپێی وڵات:'
+                    : (isArabic ? 'اختر المدينة حسب الدولة:' : 'Select city by country:')),
+            style: isKurdish
+                ? AppTheme.kurdishTitle(fontSize: 14, color: AppColors.gold)
+                : (isArabic
+                    ? AppTheme.arabicTitle(fontSize: 14, color: AppColors.gold)
+                    : AppTheme.englishTitle(fontSize: 14, color: AppColors.gold)),
           ),
         ),
 
         // Country Accordions
-        ...WorldCitiesCatalog.countryGroups.map((group) => _buildCountryAccordion(group, isKurdish, isKurmanji)),
+        ...WorldCitiesCatalog.countryGroups.map((group) => _buildCountryAccordion(group, isKurdish, isKurmanji, isArabic)),
       ],
     );
   }
 
-  Widget _buildCountryAccordion(CountryGroup group, bool isKurdish, bool isKurmanji) {
+  Widget _buildCountryAccordion(CountryGroup group, bool isKurdish, bool isKurmanji, bool isArabic) {
     final countryName = group.displayName(widget.locale);
 
     return Container(
@@ -326,26 +388,41 @@ class _LocationSelectorSheetState extends State<LocationSelectorSheet> {
               : Text(group.flag, style: const TextStyle(fontSize: 22)),
           title: Text(
             countryName,
-            style: AppTheme.kurdishText(
-              fontSize: 14,
-              color: AppColors.cream,
-              fontWeight: FontWeight.bold,
-            ),
+            style: isKurdish
+                ? AppTheme.kurdishText(
+                    fontSize: 14,
+                    color: AppColors.cream,
+                    fontWeight: FontWeight.bold,
+                  )
+                : (isArabic
+                    ? AppTheme.arabicTitle(
+                        fontSize: 14,
+                        color: AppColors.cream,
+                      )
+                    : AppTheme.englishText(
+                        fontSize: 14,
+                        color: AppColors.cream,
+                        fontWeight: FontWeight.bold,
+                      )),
           ),
           subtitle: Text(
-            '${group.cities.length} ${isKurmanji ? "باژێر" : (isKurdish ? "شار" : "cities")}',
-            style: AppTheme.kurdishText(fontSize: 11, color: AppColors.faintText),
+            '${group.cities.length} ${isKurmanji ? "باژێر" : (isKurdish ? "شار" : (isArabic ? "مدن" : "cities"))}',
+            style: isKurdish
+                ? AppTheme.kurdishText(fontSize: 11, color: AppColors.faintText)
+                : (isArabic
+                    ? AppTheme.arabicText(fontSize: 11, color: AppColors.faintText)
+                    : AppTheme.englishText(fontSize: 11, color: AppColors.faintText)),
           ),
           children: group.cities.map((city) {
             final isSelected = _currentMode == 'preset' && _currentCityId == city.id;
-            return _buildCityTile(city, isSelected, isKurdish, isKurmanji);
+            return _buildCityTile(city, isSelected, isKurdish, isKurmanji, isArabic);
           }).toList(),
         ),
       ),
     );
   }
 
-  Widget _buildCityTile(WorldCity city, bool isSelected, bool isKurdish, bool isKurmanji) {
+  Widget _buildCityTile(WorldCity city, bool isSelected, bool isKurdish, bool isKurmanji, bool isArabic) {
     final isKurdistan = city.countryEn == 'Kurdistan';
 
     return Container(
@@ -370,11 +447,22 @@ class _LocationSelectorSheetState extends State<LocationSelectorSheet> {
             Expanded(
               child: Text(
                 city.displayName(widget.locale),
-                style: AppTheme.kurdishText(
-                  fontSize: 14,
-                  color: isSelected ? AppColors.gold : AppColors.cream,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
+                style: isKurdish
+                    ? AppTheme.kurdishText(
+                        fontSize: 14,
+                        color: isSelected ? AppColors.gold : AppColors.cream,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      )
+                    : (isArabic
+                        ? AppTheme.arabicTitle(
+                            fontSize: 14,
+                            color: isSelected ? AppColors.gold : AppColors.cream,
+                          )
+                        : AppTheme.englishText(
+                            fontSize: 14,
+                            color: isSelected ? AppColors.gold : AppColors.cream,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          )),
               ),
             ),
           ],
@@ -399,7 +487,7 @@ class _LocationSelectorSheetState extends State<LocationSelectorSheet> {
                   border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.4)),
                 ),
                 child: Text(
-                  isKurdish ? 'فەرمی' : (widget.locale == 'ar' ? 'رسمي' : 'Official'),
+                  isKurdish ? 'فەرمی' : (isArabic ? 'رسمي' : 'Official'),
                   style: const TextStyle(
                     fontSize: 9,
                     color: Colors.greenAccent,

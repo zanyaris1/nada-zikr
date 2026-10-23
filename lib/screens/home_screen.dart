@@ -2020,20 +2020,19 @@ Widget _buildPathItem(String label, String arabic, bool done,
                       : AppColors.gold,
                   fontSize: 12),
             )
-          else if (!isKurdish && arabic.isNotEmpty)
-            Text(
-              arabic,
-              style: AppTheme.arabicText(
-                  color: done
-                      ? AppColors.gold.withValues(alpha: 0.5)
-                      : AppColors.gold,
-                  fontSize: 14),
-              textDirection: TextDirection.rtl,
-            )
           else if (isKurdish)
             Text(
               done ? (isKurmanji ? 'تەمامبوو ✓' : 'تەواوکرا ✓') : (isKurmanji ? 'خواندن' : 'خوێندنەوە'),
               style: AppTheme.kurdishText(
+                  color: done
+                      ? AppColors.gold.withValues(alpha: 0.5)
+                      : AppColors.gold,
+                  fontSize: 12),
+            )
+          else
+            Text(
+              done ? 'Completed ✓' : 'Read',
+              style: AppTheme.englishText(
                   color: done
                       ? AppColors.gold.withValues(alpha: 0.5)
                       : AppColors.gold,
