@@ -1,7 +1,7 @@
 name: nada_zikrakanm
-description: A simple Zikr/Tasbeeh Flutter app with Kurdish and Arabic support.
+description: Comprehensive Islamic companion featuring Kurdish localization, verified prayer times, sign language accessibility, mood-based supplications, and iOS widgets.
 publish_to: none
-version: 1.0.0+10
+version: 1.0.0+21
 environment:
   sdk: ">=3.10.0 <4.0.0"
 

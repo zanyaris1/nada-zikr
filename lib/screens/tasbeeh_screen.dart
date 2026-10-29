@@ -284,7 +284,10 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
           child: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
-              child: Column(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 620),
+                  child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -653,7 +656,9 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _targetPill(String label, bool active) {

@@ -203,7 +203,10 @@ class _ReadingScreenState extends State<ReadingScreen> {
           ),
         ),
         child: SafeArea(
-          child: Column(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: Column(
             children: [
               Padding(
                 padding: const EdgeInsets.all(20),
@@ -868,7 +871,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildCompletedScreen(bool isKurdish, bool isKurmanji, bool isArabic, AppLocalizations? loc, String lang) {

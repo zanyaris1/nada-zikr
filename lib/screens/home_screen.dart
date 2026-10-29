@@ -347,7 +347,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       parent: BouncingScrollPhysics()),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: Column(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Header card
@@ -1079,10 +1082,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          ],
         ),
       ),
-    );
+    ],
+  ),
+),
+);
   }
 
   String? _getCategoryThumbnail(String catId) {
