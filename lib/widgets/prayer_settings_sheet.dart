@@ -830,7 +830,23 @@ class _PrayerSettingsSheetState extends State<PrayerSettingsSheet>
                       ),
                     ),
                   ),
-                  if (isKurdistan)
+                  if (method.id == 'auto')
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isKurdish ? 'پێشنیارکراو' : (isArabic ? 'موصى به' : 'Recommended'),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppColors.gold,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
+                  else if (isKurdistan)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
@@ -849,7 +865,13 @@ class _PrayerSettingsSheetState extends State<PrayerSettingsSheet>
                 ],
               ),
               subtitle: Text(
-                'Fajr: ${method.fajrAngle}° | Isha: ${method.ishaIntervalMinutes != null ? "+${method.ishaIntervalMinutes}m" : "${method.ishaAngle}°"}',
+                method.id == 'auto'
+                    ? (isKurdish
+                        ? 'هەڵبژاردنی خۆکاری ڕێگای حیساب بەپێی شار و وڵات'
+                        : (isArabic
+                            ? 'تحديد تلقائي لطريقة الحساب المعتمدة حسب البلد'
+                            : 'Automatically selects standard method for your location'))
+                    : 'Fajr: ${method.fajrAngle}° | Isha: ${method.ishaIntervalMinutes != null ? "+${method.ishaIntervalMinutes}m" : "${method.ishaAngle}°"}',
                 style: AppTheme.englishText(fontSize: 11, color: AppColors.faintText),
               ),
             ),

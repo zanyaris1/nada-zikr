@@ -93,10 +93,9 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
 
   /// Checks if prayer time just arrived while user is actively in the app,
   /// playing the Azan loud and clear through device speakers.
-  void _checkForegroundAzanTrigger(String nextId, DateTime? nextTime) {
+  void _checkForegroundAzanTrigger(String nextId, DateTime? nextTime, DateTime targetCityNow) {
     if (nextTime == null) return;
-    final now = DateTime.now();
-    final diff = nextTime.difference(now);
+    final diff = nextTime.difference(targetCityNow);
     final key = '${nextId}_${nextTime.day}_${nextTime.hour}_${nextTime.minute}';
 
     // If within 1 second of prayer time or just passed within 30 seconds
@@ -365,9 +364,12 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
               final DateTime? nextTime = data['nextTime'];
               final HijriDateInfo hijriDate = data['hijriDate'];
 
+              final targetUtcOffset = (data['targetUtcOffset'] as num?)?.toDouble() ?? 3.0;
+              final targetCityNow = DateTime.now().toUtc().add(Duration(minutes: (targetUtcOffset * 60).round()));
+
               if (nextTime != null) {
-                _timeUntilNext = nextTime.difference(DateTime.now());
-                _checkForegroundAzanTrigger(nextId, nextTime);
+                _timeUntilNext = nextTime.difference(targetCityNow);
+                _checkForegroundAzanTrigger(nextId, nextTime, targetCityNow);
               }
 
               final nextItem = items.firstWhere(
@@ -848,7 +850,54 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
                               );
                             }).toList(),
                           ),
-                          const SizedBox(height: 24),
+
+                          // Active Authentic Islamic Calculation Authority Badge
+                          GestureDetector(
+                            onTap: () {
+                              PrayerSettingsSheet.show(
+                                context,
+                                onSettingsSaved: _refreshSchedule,
+                              );
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.only(top: 8, bottom: 20),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.panelColor.withValues(alpha: 0.75),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                    color: AppColors.gold.withValues(alpha: 0.35)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.verified_rounded,
+                                      size: 15, color: AppColors.gold),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      isKurdish
+                                          ? (data['dataSourceKu'] ?? data['dataSource'])
+                                          : (lang == 'ar'
+                                              ? (data['dataSourceAr'] ?? data['dataSource'])
+                                              : (data['dataSourceEn'] ?? data['dataSource'])),
+                                      style: AppTheme.englishText(
+                                        fontSize: 11,
+                                        color: AppColors.gold.withValues(alpha: 0.95),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Icon(Icons.tune_rounded,
+                                      size: 13, color: AppColors.faintText),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),

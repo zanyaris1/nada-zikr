@@ -90,7 +90,7 @@ class _MainAppScreenState extends State<MainAppScreen> {
 
     return Scaffold(
       body: IndexedStack(index: _selectedIndex, children: screens),
-      bottomNavigationBar: _InstagramFbNavBar(
+      bottomNavigationBar: _NadaBottomNavBar(
         selectedIndex: _selectedIndex,
         items: items,
         onTap: (index) => setState(() => _selectedIndex = index),
@@ -114,8 +114,8 @@ class _NavItemData {
   final IconData activeIcon;
 }
 
-class _InstagramFbNavBar extends StatelessWidget {
-  const _InstagramFbNavBar({
+class _NadaBottomNavBar extends StatelessWidget {
+  const _NadaBottomNavBar({
     required this.selectedIndex,
     required this.items,
     required this.onTap,
@@ -157,23 +157,28 @@ class _InstagramFbNavBar extends StatelessWidget {
             padding: EdgeInsets.only(bottom: bottomPadding),
             child: SizedBox(
               height: 60,
-              child: Row(
-                children: List.generate(items.length, (index) {
-                  final item = items[index];
-                  final isActive = selectedIndex == index;
-                  final label = resolveLabel(item.labelKey);
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Row(
+                    children: List.generate(items.length, (index) {
+                      final item = items[index];
+                      final isActive = selectedIndex == index;
+                      final label = resolveLabel(item.labelKey);
 
-                  return Expanded(
-                    child: _NavBarTabButton(
-                      isActive: isActive,
-                      activeIcon: item.activeIcon,
-                      inactiveIcon: item.inactiveIcon,
-                      label: label,
-                      languageCode: languageCode,
-                      onTap: () => onTap(index),
-                    ),
-                  );
-                }),
+                      return Expanded(
+                        child: _NavBarTabButton(
+                          isActive: isActive,
+                          activeIcon: item.activeIcon,
+                          inactiveIcon: item.inactiveIcon,
+                          label: label,
+                          languageCode: languageCode,
+                          onTap: () => onTap(index),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
               ),
             ),
           ),

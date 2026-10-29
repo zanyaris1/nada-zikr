@@ -139,15 +139,17 @@ class _SettingsScreenState extends State<SettingsScreen>
                             Expanded(
                               child: Text(
                                 _currentLang == 'kmr'
-                                    ? 'هەلبژارتنا ڕووکاری • Choose Theme'
+                                    ? 'هەلبژارتنا ڕووکاری'
                                     : (isKurdish
-                                        ? 'هەڵبژاردنی ڕووکار • Choose Theme'
-                                        : (_currentLang == 'ar' ? 'اختيار المظهر • Choose Theme' : 'Choose Theme')),
+                                        ? 'هەڵبژاردنی ڕووکار'
+                                        : (_currentLang == 'ar' ? 'اختيار المظهر' : 'Choose Theme')),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: isKurdish
                                     ? AppTheme.kurdishTitle(fontSize: 18, color: AppColors.gold)
-                                    : AppTheme.englishTitle(fontSize: 18, color: AppColors.gold),
+                                    : (_currentLang == 'ar'
+                                        ? AppTheme.arabicTitle(fontSize: 18, color: AppColors.gold)
+                                        : AppTheme.englishTitle(fontSize: 18, color: AppColors.gold)),
                               ),
                             ),
                           ],
@@ -234,7 +236,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   ],
                                 ),
                                 Text(
-                                  palette.description,
+                                  palette.getLocalizedDescription(_currentLang),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(fontSize: 9, color: palette.faintText),
@@ -367,8 +369,16 @@ class _SettingsScreenState extends State<SettingsScreen>
 
                     // Theme Selector Settings Card
                     Text(
-                      loc?.translate('theme') ?? 'ڕووکار',
-                      style: isKurdish ? AppTheme.kurdishTitle(fontSize: 14, color: AppColors.gold) : AppTheme.labelText(color: AppColors.mutedText),
+                      _currentLang == 'kmr'
+                          ? 'ڕووکار'
+                          : (isKurdish
+                              ? 'ڕووکار'
+                              : (_currentLang == 'ar' ? 'المظهر' : 'Theme')),
+                      style: isKurdish
+                          ? AppTheme.kurdishTitle(fontSize: 14, color: AppColors.gold)
+                          : (_currentLang == 'ar'
+                              ? AppTheme.arabicTitle(fontSize: 14, color: AppColors.gold)
+                              : AppTheme.labelText(color: AppColors.mutedText)),
                     ),
                     const SizedBox(height: 10),
                     GestureDetector(
@@ -404,12 +414,18 @@ class _SettingsScreenState extends State<SettingsScreen>
                                             : (_currentLang == 'ar' ? 'اختيار المظهر' : 'Choose Theme')),
                                     style: isKurdish
                                         ? AppTheme.kurdishTitle(fontSize: 15, color: AppColors.cream)
-                                        : AppTheme.englishText(fontSize: 15, fontWeight: FontWeight.bold),
+                                        : (_currentLang == 'ar'
+                                            ? AppTheme.arabicTitle(fontSize: 15, color: AppColors.cream)
+                                            : AppTheme.englishText(fontSize: 15, fontWeight: FontWeight.bold)),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     '${currentPalette.getLocalizedLabel(_currentLang)} · (8 ${_currentLang == 'kmr' ? 'ڕووکار' : (isKurdish ? 'ڕووکار' : (_currentLang == 'ar' ? 'مظاهر' : 'Themes'))})',
-                                    style: AppTheme.englishText(fontSize: 12, color: AppColors.gold),
+                                    style: isKurdish
+                                        ? AppTheme.kurdishText(fontSize: 12, color: AppColors.gold)
+                                        : (_currentLang == 'ar'
+                                            ? AppTheme.arabicText(fontSize: 12, color: AppColors.gold)
+                                            : AppTheme.englishText(fontSize: 12, color: AppColors.gold)),
                                   ),
                                 ],
                               ),

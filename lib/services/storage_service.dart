@@ -318,7 +318,7 @@ class StorageService {
 
   static String getPrayerMethod() {
     return Hive.box(settingsBox)
-        .get(keyPrayerMethod, defaultValue: 'kurdistan_endowments');
+        .get(keyPrayerMethod, defaultValue: 'auto');
   }
 
   static Future<void> savePrayerMethod(String methodId) async {

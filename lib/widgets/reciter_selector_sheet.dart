@@ -71,7 +71,8 @@ class _ReciterSelectorSheetState extends State<ReciterSelectorSheet> {
     final isKurmanji = lang == 'kmr';
     final isKurdish = lang == 'ku' || isKurmanji;
     final isKurdishAny = isKurmanji || isKurdish;
-    final isRTL = lang == 'ar' || lang == 'ku' || lang == 'kmr';
+    final isArabic = lang == 'ar';
+    final isRTL = isArabic || isKurdishAny;
     final currentReciter = QuranAudioService.instance.selectedReciter;
 
     return Container(
@@ -129,28 +130,38 @@ class _ReciterSelectorSheetState extends State<ReciterSelectorSheet> {
                                   ? 'خاندەڤانێن قورئانێ (${kQuranReciters.length} خاندەڤان)'
                                   : (isKurdish
                                       ? 'خوێنەرانی قورئان (${kQuranReciters.length} خوێنەر)'
-                                      : 'Quran Reciters (${kQuranReciters.length} Reciters)'),
+                                      : (isArabic
+                                          ? 'قرّاء القرآن الكريم (${kQuranReciters.length} قارئ)'
+                                          : 'Quran Reciters (${kQuranReciters.length} Reciters)')),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: isKurdishAny
                                   ? AppTheme.kurdishTitle(
                                       fontSize: 17, color: AppColors.gold)
-                                  : AppTheme.englishTitle(
-                                      fontSize: 17, color: AppColors.gold),
+                                  : (isArabic
+                                      ? AppTheme.arabicTitle(
+                                          fontSize: 17, color: AppColors.gold)
+                                      : AppTheme.englishTitle(
+                                          fontSize: 17, color: AppColors.gold)),
                             ),
                             Text(
                               isKurmanji
                                   ? 'خاندەڤانێن دیارکرنا ئایەتان و دەنگێ سورەتان'
                                   : (isKurdish
                                       ? 'خوێنەرانی دیاریکردنی ئایەت و دەنگی سوورەت'
-                                      : 'Ayah Highlighting & Full Surah Reciters'),
+                                      : (isArabic
+                                          ? 'تلاوات مع تتبع الآيات وتسجيلات السور الكاملة'
+                                          : 'Ayah Highlighting & Full Surah Reciters')),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: isKurdishAny
                                   ? AppTheme.kurdishText(
                                       fontSize: 11, color: AppColors.faintText)
-                                  : AppTheme.englishText(
-                                      fontSize: 11, color: AppColors.faintText),
+                                  : (isArabic
+                                      ? AppTheme.arabicText(
+                                          fontSize: 11, color: AppColors.faintText)
+                                      : AppTheme.englishText(
+                                          fontSize: 11, color: AppColors.faintText)),
                             ),
                           ],
                         ),
@@ -174,15 +185,25 @@ class _ReciterSelectorSheetState extends State<ReciterSelectorSheet> {
               controller: _searchController,
               onChanged: (val) => setState(() => _searchQuery = val),
               textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
-              style: AppTheme.englishText(color: AppColors.cream),
+              style: isKurdishAny
+                  ? AppTheme.kurdishText(color: AppColors.cream)
+                  : (isArabic
+                      ? AppTheme.arabicText(color: AppColors.cream)
+                      : AppTheme.englishText(color: AppColors.cream)),
               decoration: InputDecoration(
                 hintText: isKurmanji
-                    ? 'ل خاندەڤانی بگەڕە... / Search'
+                    ? 'ل خاندەڤانی بگەڕە...'
                     : (isKurdish
-                        ? 'گەڕان بۆ خوێنەر... / Search Reciter'
-                        : 'Search Reciter'),
-                hintStyle: AppTheme.englishText(
-                    color: AppColors.faintText, fontSize: 13),
+                        ? 'گەڕان بۆ خوێنەر...'
+                        : (isArabic ? 'البحث عن قارئ...' : 'Search Reciter')),
+                hintStyle: isKurdishAny
+                    ? AppTheme.kurdishText(
+                        color: AppColors.faintText, fontSize: 13)
+                    : (isArabic
+                        ? AppTheme.arabicText(
+                            color: AppColors.faintText, fontSize: 13)
+                        : AppTheme.englishText(
+                            color: AppColors.faintText, fontSize: 13)),
                 prefixIcon:
                     Icon(Icons.search_rounded, color: AppColors.gold, size: 18),
                 suffixIcon: _searchController.text.isNotEmpty
@@ -250,18 +271,26 @@ class _ReciterSelectorSheetState extends State<ReciterSelectorSheet> {
                                       ? 'خاندەڤانێن دەنگێ تەمام یێ سورەتێ (بێ دیارکرنا ئایەتان)'
                                       : (isKurdish
                                           ? 'خوێنەرانی دەنگی تەواوی سوورەت (بێ دیاریکردنی ئایەت)'
-                                          : 'Full Surah Audio Reciters (No Ayah Highlighting)'),
+                                          : (isArabic
+                                              ? 'قراء السور الكاملة (دون تتبع الآيات)'
+                                              : 'Full Surah Audio Reciters (No Ayah Highlighting)')),
                                   style: isKurdishAny
                                       ? AppTheme.kurdishText(
                                           fontSize: 11,
                                           color: AppColors.cream,
                                           fontWeight: FontWeight.w600,
                                         )
-                                      : AppTheme.englishText(
-                                          fontSize: 11,
-                                          color: AppColors.cream,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                      : (isArabic
+                                          ? AppTheme.arabicText(
+                                              fontSize: 11,
+                                              color: AppColors.cream,
+                                              fontWeight: FontWeight.w600,
+                                            )
+                                          : AppTheme.englishText(
+                                              fontSize: 11,
+                                              color: AppColors.cream,
+                                              fontWeight: FontWeight.w600,
+                                            )),
                                 ),
                               ),
                             ],
@@ -374,13 +403,20 @@ class _ReciterSelectorSheetState extends State<ReciterSelectorSheet> {
                                                   : AppColors.cream,
                                               fontWeight: FontWeight.bold,
                                             )
-                                          : AppTheme.englishText(
-                                              fontSize: 15,
-                                              color: isSelected
-                                                  ? AppColors.gold
-                                                  : AppColors.cream,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                          : (isArabic
+                                              ? AppTheme.arabicTitle(
+                                                  fontSize: 15,
+                                                  color: isSelected
+                                                      ? AppColors.gold
+                                                      : AppColors.cream,
+                                                )
+                                              : AppTheme.englishText(
+                                                  fontSize: 15,
+                                                  color: isSelected
+                                                      ? AppColors.gold
+                                                      : AppColors.cream,
+                                                  fontWeight: FontWeight.bold,
+                                                )),
                                     ),
                                   ),
                                   const SizedBox(width: 6),

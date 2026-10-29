@@ -291,6 +291,10 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
 
         final normalized = (h + 360.0) % 360.0;
 
+        if (_heading == null) {
+          _smoothHeading = normalized;
+        }
+
         // Smooth angle tracking to prevent 360° spin jumps
         double diff = (normalized - _smoothHeading) % 360.0;
         if (diff > 180.0) diff -= 360.0;

@@ -294,7 +294,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               );
             }),
             // Main content
-            Column(
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 580),
+                child: Column(
               children: [
                 // App Icon
                 Padding(
@@ -393,10 +396,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ],
             ),
-          ],
+          ),
         ),
-      ),
-    );
+      ],
+    ),
+  ),
+);
   }
 
   Widget _buildStep0() {

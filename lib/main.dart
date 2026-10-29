@@ -30,8 +30,6 @@ Future<void> _initializeApp() async {
   await PrayerRepository.preload();
   await LocationService.getCurrentLocation(forceGps: false);
 
-  // Prompt location permission at app launch
-  await LocationService.requestStartupPermission();
   await NotificationService.initialize();
   // NOTE: Battery optimization exclusion is requested AFTER the UI is visible
   // (see _MyAppState.initState post-frame callback), not here during cold startup.

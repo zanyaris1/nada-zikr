@@ -347,7 +347,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       parent: BouncingScrollPhysics()),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: Column(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Header card
@@ -1079,10 +1082,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          ],
         ),
       ),
-    );
+    ],
+  ),
+),
+);
   }
 
   String? _getCategoryThumbnail(String catId) {
@@ -2020,20 +2025,19 @@ Widget _buildPathItem(String label, String arabic, bool done,
                       : AppColors.gold,
                   fontSize: 12),
             )
-          else if (!isKurdish && arabic.isNotEmpty)
-            Text(
-              arabic,
-              style: AppTheme.arabicText(
-                  color: done
-                      ? AppColors.gold.withValues(alpha: 0.5)
-                      : AppColors.gold,
-                  fontSize: 14),
-              textDirection: TextDirection.rtl,
-            )
           else if (isKurdish)
             Text(
               done ? (isKurmanji ? 'تەمامبوو ✓' : 'تەواوکرا ✓') : (isKurmanji ? 'خواندن' : 'خوێندنەوە'),
               style: AppTheme.kurdishText(
+                  color: done
+                      ? AppColors.gold.withValues(alpha: 0.5)
+                      : AppColors.gold,
+                  fontSize: 12),
+            )
+          else
+            Text(
+              done ? 'Completed ✓' : 'Read',
+              style: AppTheme.englishText(
                   color: done
                       ? AppColors.gold.withValues(alpha: 0.5)
                       : AppColors.gold,
