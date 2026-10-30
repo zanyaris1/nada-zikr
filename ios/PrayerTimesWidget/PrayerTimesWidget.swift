@@ -807,7 +807,7 @@ struct PrayerTimesWidgetEntryView: View {
                 }
             }
         }
-        .widgetURL(URL(string: "nadazikr://prayer-times"))
+        .widgetURL(URL(string: "nadazikr://open/prayer_times?homeWidget"))
     }
 
     // MARK: - Small Widget (Balanced, Compact, No Dead Space)

@@ -94,6 +94,12 @@ class StorageService {
     return box.get(key, defaultValue: defaultValue);
   }
 
+  static dynamic readSettingSync(String key, {dynamic defaultValue}) {
+    if (!Hive.isBoxOpen(settingsBox)) return defaultValue;
+    final box = Hive.box(settingsBox);
+    return box.get(key, defaultValue: defaultValue);
+  }
+
   /// Resets tasbih session tap counters to 0 on cold app startup,
   /// preserving user target configurations and dhikr selections.
   static Future<void> resetTasbihSessionCounts() async {

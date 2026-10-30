@@ -17,6 +17,7 @@ import '../widgets/downloaded_surahs_sheet.dart';
 import '../widgets/quran_audio_player_widget.dart';
 import '../widgets/reciter_selector_sheet.dart';
 import '../widgets/sign_language_text_widget.dart';
+import '../widgets/quran_mushaf_page_widget.dart';
 // AI search temporarily hidden — uncomment to re-enable:
 // import 'quran_ai_search_screen.dart';
 
@@ -990,11 +991,16 @@ class SurahReadingScreen extends StatefulWidget {
 class _SurahReadingScreenState extends State<SurahReadingScreen> {
   bool _loading = true;
   bool _showPlayerBar = false;
-  bool _useAyahList = false;
+  String _readingLayout = 'book'; // 'book', 'mushaf', 'list'
+  bool get _useAyahList => _readingLayout == 'list';
   bool _showSearch = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   double _quranFontSize = 24;
+
+  late PageController _mushafPageController;
+  int _currentMushafPage = 1;
+  Map<int, List<QuranAyah>> _allPageAyahs = {};
 
   List<QuranSurahMeta> _surahs = const [];
   late int _activeSurahNumber;
@@ -1093,32 +1099,67 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
       setState(() => _bookmarkedAyahs.addAll(set));
     });
 
-    StorageService.readSetting('quran_reading_layout', defaultValue: 'book')
-        .then((layout) {
-      if (mounted) setState(() => _useAyahList = layout == 'list');
-    });
+    // Read preferred layout synchronously from storage so it loads immediately without flashing or refreshing
+    final savedLayout = StorageService.readSettingSync('quran_reading_layout', defaultValue: 'book');
+    if (savedLayout is String && (savedLayout == 'book' || savedLayout == 'mushaf' || savedLayout == 'list')) {
+      _readingLayout = savedLayout;
+    }
 
-    StorageService.readSetting('quran_font_size', defaultValue: 24)
-        .then((size) {
-      if (mounted && size is num) {
-        setState(() => _quranFontSize = size.toDouble().clamp(18, 34));
+    final savedFontSize = StorageService.readSettingSync('quran_font_size', defaultValue: 24);
+    if (savedFontSize is num) {
+      _quranFontSize = savedFontSize.toDouble().clamp(18, 34);
+    }
+
+    _allPageAyahs = QuranService.instance.ayahsByPageSync ?? {};
+
+    int initialPage = widget.surah.startPage;
+    if (widget.initialAyah != null && _allPageAyahs.isNotEmpty) {
+      for (final entry in _allPageAyahs.entries) {
+        if (entry.value.any((a) => a.surah == widget.surah.number && a.ayah == widget.initialAyah)) {
+          initialPage = entry.key;
+          break;
+        }
       }
-    });
+    }
+    _currentMushafPage = initialPage;
+    _mushafPageController = PageController(
+      initialPage: (_currentMushafPage - 1).clamp(0, 603),
+    );
 
     _load();
   }
 
-  Future<void> _setReadingLayout(bool useAyahList) async {
-    setState(() => _useAyahList = useAyahList);
-    await StorageService.saveSetting(
-      'quran_reading_layout',
-      useAyahList ? 'list' : 'book',
-    );
-    final ayahNumber =
-        _highlightedAyahNumber ?? QuranAudioService.instance.currentAyahNumber;
-    final surahNumber =
-        _highlightedSurahNumber ?? _activeSurahNumber;
-    if (ayahNumber != null) {
+  Future<void> _setReadingLayout(String layout) async {
+    if (_readingLayout == layout) return;
+
+    // Immediately persist choice so anytime user returns, this exact layout is restored
+    await StorageService.saveSetting('quran_reading_layout', layout);
+
+    if (layout == 'mushaf') {
+      int targetPage = _currentMushafPage;
+      if (_highlightedSurahNumber != null && _highlightedAyahNumber != null) {
+        final match = _activeAyahs.firstWhere(
+          (a) => a.surah == _highlightedSurahNumber && a.ayah == _highlightedAyahNumber,
+          orElse: () => _activeAyahs.isNotEmpty
+              ? _activeAyahs.first
+              : QuranAyah(surah: _activeSurahNumber, ayah: 1, text: '', page: _currentMushafPage, juz: 1),
+        );
+        targetPage = match.page;
+      } else if (_activeAyahs.isNotEmpty) {
+        targetPage = _activeAyahs.first.page;
+      }
+      _currentMushafPage = targetPage;
+      _mushafPageController.dispose();
+      _mushafPageController = PageController(initialPage: (_currentMushafPage - 1).clamp(0, 603));
+      setState(() {
+        _readingLayout = layout;
+      });
+    } else {
+      setState(() {
+        _readingLayout = layout;
+      });
+      final ayahNumber = _highlightedAyahNumber ?? 1;
+      final surahNumber = _highlightedSurahNumber ?? _activeSurahNumber;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _scrollToAyah(surahNumber, ayahNumber, animated: false);
       });
@@ -1143,9 +1184,12 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
     final results = await Future.wait([
       QuranService.instance.loadAyahsForSurah(widget.surah.number),
       QuranService.instance.loadSurahs(),
+      QuranService.instance.loadAllAyahsByPage(),
     ]);
     final ayahs = results[0] as List<QuranAyah>;
     final surahs = results[1] as List<QuranSurahMeta>;
+    final allPages = results[2] as Map<int, List<QuranAyah>>;
+    _allPageAyahs = allPages;
 
     final currentNum = widget.surah.number;
     _surahHeaderKeys[currentNum] = GlobalKey();
@@ -1388,6 +1432,32 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
       _highlightedSurahNumber = playingSurah;
       _highlightedAyahNumber = ayahNumber;
     });
+
+    // Auto-scroll to the current ayah (unless user is manually scrolling)
+    if (_readingLayout == 'mushaf') {
+      final pageAyahs = _allPageAyahs[_currentMushafPage] ?? const [];
+      final onCurrentPage = pageAyahs.any((a) => a.surah == playingSurah && a.ayah == ayahNumber);
+      if (!onCurrentPage) {
+        int? targetPage;
+        for (final entry in _allPageAyahs.entries) {
+          if (entry.value.any((a) => a.surah == playingSurah && a.ayah == ayahNumber)) {
+            targetPage = entry.key;
+            break;
+          }
+        }
+        if (targetPage != null && targetPage != _currentMushafPage) {
+          _currentMushafPage = targetPage;
+          if (_mushafPageController.hasClients) {
+            _mushafPageController.animateToPage(
+              (targetPage - 1).clamp(0, 603),
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeInOut,
+            );
+          }
+        }
+      }
+      return;
+    }
 
     // Auto-scroll to the current ayah (unless user is manually scrolling)
     if (ayahNumber != null && !_userScrollOverride) {
@@ -1754,6 +1824,7 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
       recognizer.dispose();
     }
     _bookTapRecognizers.clear();
+    _mushafPageController.dispose();
     _searchController.dispose();
     _scrollController.dispose();
     _scrollOverrideTimer?.cancel();
@@ -1769,6 +1840,23 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
       _highlightedSurahNumber = _activeSurahNumber;
       _highlightedAyahNumber = ayahNumber;
     });
+
+    if (_readingLayout == 'mushaf') {
+      final targetAyah = ayahs.firstWhere(
+        (a) => a.ayah == ayahNumber,
+        orElse: () => ayahs.first,
+      );
+      _currentMushafPage = targetAyah.page;
+      if (_mushafPageController.hasClients) {
+        _mushafPageController.animateToPage(
+          (_currentMushafPage - 1).clamp(0, 603),
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+        );
+      }
+      return;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _scrollToAyah(_activeSurahNumber, ayahNumber, animated: true);
     });
@@ -1776,11 +1864,23 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
 
   void _jumpToPage(int pageNumber) {
     AppHaptics.selectionClick();
+    final clamped = pageNumber.clamp(1, 604);
+    if (_readingLayout == 'mushaf') {
+      _currentMushafPage = clamped;
+      if (_mushafPageController.hasClients) {
+        _mushafPageController.animateToPage(
+          clamped - 1,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+        );
+      }
+      return;
+    }
     final ayahs = _activeAyahs;
     final match = ayahs.firstWhere(
-      (a) => a.page == pageNumber,
+      (a) => a.page == clamped,
       orElse: () => ayahs.firstWhere(
-        (a) => a.page >= pageNumber,
+        (a) => a.page >= clamped,
         orElse: () => ayahs.isNotEmpty ? ayahs.first : QuranAyah(surah: _activeSurahNumber, ayah: 1, text: '', page: 1, juz: 1),
       ),
     );
@@ -2568,6 +2668,267 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // REAL QURAN MUSHAF PAGE LAYOUT (Option 2 — 604 Authentic Madani Pages)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  Widget _buildMushafPageLayout(
+    BuildContext context,
+    String language,
+    bool isRtl,
+    AppLocalizations? loc,
+  ) {
+    return Column(
+      children: [
+        Expanded(
+          child: PageView.builder(
+            controller: _mushafPageController,
+            itemCount: 604,
+            reverse: true, // Right-to-Left physical page turning for authentic Quran Mushaf
+            physics: const BouncingScrollPhysics(),
+            onPageChanged: (index) {
+              final pageNumber = index + 1;
+              setState(() {
+                _currentMushafPage = pageNumber;
+              });
+
+              final pageAyahs = _allPageAyahs[pageNumber] ?? const [];
+              if (pageAyahs.isNotEmpty) {
+                final pageSurahNum = pageAyahs.first.surah;
+                final pageSurahMeta = _getSurahMeta(pageSurahNum);
+                if (pageSurahMeta != null && pageSurahNum != _activeSurahNumber) {
+                  setState(() {
+                    _activeSurahNumber = pageSurahNum;
+                  });
+                }
+                if (pageSurahMeta != null) {
+                  StorageService.saveLastReadSurah(
+                    surahNumber: pageSurahMeta.number,
+                    surahNameAr: pageSurahMeta.arabicName,
+                    surahNameKu: pageSurahMeta.kurdishName,
+                    surahNameEn: pageSurahMeta.englishName,
+                    ayahNumber: pageAyahs.first.ayah,
+                  );
+                }
+              }
+            },
+            itemBuilder: (context, index) {
+              final pageNumber = index + 1;
+              final pageAyahs = _allPageAyahs[pageNumber] ?? const [];
+
+              return QuranMushafPageWidget(
+                key: ValueKey('mushaf_page_$pageNumber'),
+                pageNumber: pageNumber,
+                ayahs: pageAyahs,
+                getSurahMeta: _getSurahMeta,
+                highlightedSurahNumber: _highlightedSurahNumber,
+                highlightedAyahNumber: _highlightedAyahNumber,
+                bookmarkedAyahs: _bookmarkedAyahs,
+                onAyahTap: (ayah) => _showAyahActionMenu(ayah),
+                isRtl: isRtl,
+                language: language,
+              );
+            },
+          ),
+        ),
+
+        // Floating Bottom Navigation Bar for Mushaf Mode
+        MushafBottomNavigationBar(
+          currentPage: _currentMushafPage,
+          totalPages: 604,
+          language: language,
+          onPreviousPage: () {
+            if (_currentMushafPage > 1 && _mushafPageController.hasClients) {
+              _mushafPageController.previousPage(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            }
+          },
+          onNextPage: () {
+            if (_currentMushafPage < 604 && _mushafPageController.hasClients) {
+              _mushafPageController.nextPage(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            }
+          },
+          onOpenJumpSheet: () => _openMushafJumpSheet(context, language, isRtl),
+        ),
+      ],
+    );
+  }
+
+  void _openMushafJumpSheet(BuildContext context, String language, bool isRtl) {
+    AppHaptics.selectionClick();
+    int tempPage = _currentMushafPage;
+    final pageController = TextEditingController(text: '$tempPage');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                16,
+                20,
+                MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.darkBgAlt,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                border: Border.all(color: AppColors.panelBorderColor),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.panelBorderColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        language == 'kmr'
+                            ? 'دەربازبوون بۆ بەرپەرێ'
+                            : language == 'ku'
+                                ? 'چوون بۆ لاپەڕە'
+                                : language == 'ar'
+                                    ? 'الانتقال إلى صفحة'
+                                    : 'Jump to Page',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.gold,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          '${toArabicDigits(tempPage)} / ٦٠٤',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.gold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: AppColors.gold,
+                      inactiveTrackColor: AppColors.panelBorderColor,
+                      thumbColor: AppColors.gold,
+                      overlayColor: AppColors.gold.withValues(alpha: 0.2),
+                    ),
+                    child: Slider(
+                      value: tempPage.toDouble(),
+                      min: 1,
+                      max: 604,
+                      divisions: 603,
+                      onChanged: (val) {
+                        setSheetState(() {
+                          tempPage = val.round();
+                          pageController.text = '$tempPage';
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: pageController,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                            hintText: '1 - 604',
+                            hintStyle: TextStyle(color: AppColors.mutedText),
+                            filled: true,
+                            fillColor: AppColors.darkPanel,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: AppColors.panelBorderColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: AppColors.panelBorderColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: AppColors.gold),
+                            ),
+                          ),
+                          onChanged: (val) {
+                            final parsed = int.tryParse(val);
+                            if (parsed != null && parsed >= 1 && parsed <= 604) {
+                              setSheetState(() => tempPage = parsed);
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.gold,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _jumpToPage(tempPage);
+                        },
+                        child: Text(
+                          language == 'kmr'
+                              ? 'بچۆ'
+                              : language == 'ku'
+                                  ? 'بڕۆ'
+                                  : language == 'ar'
+                                      ? 'انتقال'
+                                      : 'Go',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final activeSurah = _activeSurah;
@@ -2803,72 +3164,154 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                               icon: Icon(Icons.view_agenda_outlined,
                                   color: AppColors.gold, size: 20),
                               color: AppColors.darkPanel,
-                              onSelected: (value) => _setReadingLayout(value == 'list'),
+                              onSelected: _setReadingLayout,
                               itemBuilder: (context) => [
+                                // 1. Primary Option (Scroll Layout)
                                 PopupMenuItem(
                                   value: 'book',
-                                  child: Text(
-                                    language == 'kmr'
-                                        ? 'شێوازێ پەڕتووکێ'
-                                        : language == 'ku'
-                                        ? 'شێوازی کتێب'
-                                        : language == 'ar'
-                                            ? 'نمط المصحف'
-                                            : 'Book layout',
-                                    style: isRtl
-                                        ? AppTheme.kurdishText(
-                                            color: AppColors.cream, fontSize: 13)
-                                        : AppTheme.englishText(
-                                            color: AppColors.cream, fontSize: 13),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.swap_vert_rounded,
+                                        color: _readingLayout == 'book'
+                                            ? AppColors.gold
+                                            : AppColors.cream.withValues(alpha: 0.6),
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        language == 'kmr'
+                                            ? 'شێوازێ سکڕۆڵێ'
+                                            : language == 'ku'
+                                                ? 'شێوازی سکڕۆڵ'
+                                                : language == 'ar'
+                                                    ? 'نمط التمرير'
+                                                    : 'Scroll layout',
+                                        style: isRtl
+                                            ? AppTheme.kurdishText(
+                                                color: _readingLayout == 'book'
+                                                    ? AppColors.gold
+                                                    : AppColors.cream,
+                                                fontSize: 13,
+                                              )
+                                            : AppTheme.englishText(
+                                                color: _readingLayout == 'book'
+                                                    ? AppColors.gold
+                                                    : AppColors.cream,
+                                                fontSize: 13,
+                                              ),
+                                      ),
+                                    ],
                                   ),
                                 ),
+                                // 2. NEW Second Option (Real Quran Mushaf Pages)
+                                PopupMenuItem(
+                                  value: 'mushaf',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.auto_stories_rounded,
+                                        color: _readingLayout == 'mushaf'
+                                            ? AppColors.gold
+                                            : AppColors.cream.withValues(alpha: 0.6),
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        language == 'kmr'
+                                            ? 'لاپەڕێن موصحەفێ'
+                                            : language == 'ku'
+                                                ? 'لاپەڕەکانی موسحەف'
+                                                : language == 'ar'
+                                                    ? 'صفحات المصحف الشريف'
+                                                    : 'Mushaf Pages',
+                                        style: isRtl
+                                            ? AppTheme.kurdishText(
+                                                color: _readingLayout == 'mushaf'
+                                                    ? AppColors.gold
+                                                    : AppColors.cream,
+                                                fontSize: 13,
+                                              )
+                                            : AppTheme.englishText(
+                                                color: _readingLayout == 'mushaf'
+                                                    ? AppColors.gold
+                                                    : AppColors.cream,
+                                                fontSize: 13,
+                                              ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // 3. Third Option (Ayah list)
                                 PopupMenuItem(
                                   value: 'list',
-                                  child: Text(
-                                    language == 'kmr'
-                                        ? 'ئایەت ب ئایەت'
-                                        : language == 'ku'
-                                        ? 'ئایەت بە ئایەت'
-                                        : language == 'ar'
-                                            ? 'آية بعد آية'
-                                            : 'Ayah list',
-                                    style: isRtl
-                                        ? AppTheme.kurdishText(
-                                            color: AppColors.cream, fontSize: 13)
-                                        : AppTheme.englishText(
-                                            color: AppColors.cream, fontSize: 13),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.view_stream_rounded,
+                                        color: _readingLayout == 'list'
+                                            ? AppColors.gold
+                                            : AppColors.cream.withValues(alpha: 0.6),
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        language == 'kmr'
+                                            ? 'ئایەت ب ئایەت'
+                                            : language == 'ku'
+                                                ? 'ئایەت بە ئایەت'
+                                                : language == 'ar'
+                                                    ? 'آية بعد آية'
+                                                    : 'Ayah list',
+                                        style: isRtl
+                                            ? AppTheme.kurdishText(
+                                                color: _readingLayout == 'list'
+                                                    ? AppColors.gold
+                                                    : AppColors.cream,
+                                                fontSize: 13,
+                                              )
+                                            : AppTheme.englishText(
+                                                color: _readingLayout == 'list'
+                                                    ? AppColors.gold
+                                                    : AppColors.cream,
+                                                fontSize: 13,
+                                              ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
-                            PopupMenuButton<double>(
-                              tooltip: language == 'kmr'
-                                  ? 'قەبارێ دەقێ قورئانێ'
-                                  : language == 'ku'
-                                      ? 'قەبارەی دەقی قورئان'
-                                      : language == 'ar'
-                                          ? 'حجم نص القرآن'
-                                          : 'Quran text size',
-                              icon: Icon(Icons.format_size_rounded,
-                                  color: AppColors.gold, size: 20),
-                              color: AppColors.darkPanel,
-                              onSelected: _setQuranFontSize,
-                              itemBuilder: (context) => [
-                                for (final size in [18.0, 22.0, 24.0, 28.0, 32.0])
-                                  PopupMenuItem<double>(
-                                    value: size,
-                                    child: Text(
-                                      '${size.toInt()} px',
-                                      style: AppTheme.englishText(
-                                        color: size == _quranFontSize
-                                            ? AppColors.gold
-                                            : AppColors.cream,
-                                        fontSize: 13,
+                            // In Mushaf page mode, font size does not apply ("just not font size in it")
+                            if (_readingLayout != 'mushaf')
+                              PopupMenuButton<double>(
+                                tooltip: language == 'kmr'
+                                    ? 'قەبارێ دەقێ قورئانێ'
+                                    : language == 'ku'
+                                        ? 'قەبارەی دەقی قورئان'
+                                        : language == 'ar'
+                                            ? 'حجم نص القرآن'
+                                            : 'Quran text size',
+                                icon: Icon(Icons.format_size_rounded,
+                                    color: AppColors.gold, size: 20),
+                                color: AppColors.darkPanel,
+                                onSelected: _setQuranFontSize,
+                                itemBuilder: (context) => [
+                                  for (final size in [18.0, 22.0, 24.0, 28.0, 32.0])
+                                    PopupMenuItem<double>(
+                                      value: size,
+                                      child: Text(
+                                        '${size.toInt()} px',
+                                        style: AppTheme.englishText(
+                                          color: size == _quranFontSize
+                                              ? AppColors.gold
+                                              : AppColors.cream,
+                                          fontSize: 13,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                              ],
-                            ),
+                                ],
+                              ),
                           ],
                         ),
                       ),
@@ -3012,21 +3455,28 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                           _updateActiveSurahOnScroll();
                           return false;
                         },
-                        child: _useAyahList
-                            ? _buildAyahListLayout(
+                        child: _readingLayout == 'mushaf'
+                            ? _buildMushafPageLayout(
                                 context,
                                 language,
                                 isRtl,
                                 loc,
-                                _quranFontSize,
                               )
-                            : _buildBookLayout(
-                                context,
-                                language,
-                                isRtl,
-                                loc,
-                                _quranFontSize,
-                              ),
+                            : _readingLayout == 'list'
+                                ? _buildAyahListLayout(
+                                    context,
+                                    language,
+                                    isRtl,
+                                    loc,
+                                    _quranFontSize,
+                                  )
+                                : _buildBookLayout(
+                                    context,
+                                    language,
+                                    isRtl,
+                                    loc,
+                                    _quranFontSize,
+                                  ),
                       ),
               ),
 
