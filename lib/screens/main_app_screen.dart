@@ -9,14 +9,49 @@ import 'quran_screen.dart';
 import 'settings_screen.dart';
 
 class MainAppScreen extends StatefulWidget {
-  const MainAppScreen({Key? key}) : super(key: key);
+  const MainAppScreen({Key? key, this.initialTabIndex = 0, this.tabNotifier}) : super(key: key);
+
+  final int initialTabIndex;
+
+  /// Optional external notifier — when its value changes the nav bar jumps
+  /// to that tab index.  Typically driven by a home-screen widget tap.
+  final ValueNotifier<int>? tabNotifier;
 
   @override
   State<MainAppScreen> createState() => _MainAppScreenState();
 }
 
 class _MainAppScreenState extends State<MainAppScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialTabIndex;
+    widget.tabNotifier?.addListener(_onTabNotifierChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant MainAppScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tabNotifier != widget.tabNotifier) {
+      oldWidget.tabNotifier?.removeListener(_onTabNotifierChanged);
+      widget.tabNotifier?.addListener(_onTabNotifierChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.tabNotifier?.removeListener(_onTabNotifierChanged);
+    super.dispose();
+  }
+
+  void _onTabNotifierChanged() {
+    final idx = widget.tabNotifier?.value;
+    if (idx != null && mounted) {
+      setState(() => _selectedIndex = idx);
+    }
+  }
 
   void _onSelectTab(int index) {
     if (mounted) {

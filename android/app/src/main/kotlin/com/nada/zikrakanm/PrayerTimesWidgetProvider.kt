@@ -1,12 +1,13 @@
 package com.nada.zikrakanm
 
-import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.widget.RemoteViews
+import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetPlugin
 
 data class WidgetThemeConfig(
@@ -228,13 +229,12 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
                 }
             }
 
-            // Launch app on widget tap
-            val intent = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            }
-            val pendingIntent = PendingIntent.getActivity(
-                context, 0, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            // Launch app on widget tap → navigate directly to Prayer Times tab
+            val widgetUri = Uri.parse("nadazikr://open/prayer_times")
+            val pendingIntent = HomeWidgetLaunchIntent.getActivity(
+                context,
+                MainActivity::class.java,
+                widgetUri,
             )
             setOnClickPendingIntent(R.id.widget_root, pendingIntent)
         }
