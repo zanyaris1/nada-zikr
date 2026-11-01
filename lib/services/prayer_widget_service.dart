@@ -79,10 +79,11 @@ class PrayerWidgetService {
   /// current prayer period we are (used by the iOS progress ring).
   static double _calcPrayerProgress(
     PrayerTimeItem? current,
-    PrayerTimeItem? next,
-  ) {
+    PrayerTimeItem? next, [
+    DateTime? cityNow,
+  ]) {
     if (current == null || next == null) return 0.0;
-    final now = DateTime.now();
+    final now = cityNow ?? DateTime.now();
     final periodStart = current.time;
     final periodEnd = next.time;
     final totalMs = periodEnd.difference(periodStart).inMilliseconds;
@@ -206,10 +207,21 @@ class PrayerWidgetService {
       final nextPrayerTime = nextItem != null ? _fullTime(nextItem.time) : '--:--';
       final nextPrayerId = nextItem?.id ?? 'fajr';
 
-      // Calculate time difference
+      final targetUtcOffset = (schedule['targetUtcOffset'] as num?)?.toDouble() ?? 3.0;
+      final targetCityUtc = DateTime.now().toUtc().add(Duration(minutes: (targetUtcOffset * 60).round()));
+      final targetCityNow = DateTime(
+        targetCityUtc.year,
+        targetCityUtc.month,
+        targetCityUtc.day,
+        targetCityUtc.hour,
+        targetCityUtc.minute,
+        targetCityUtc.second,
+      );
+
+      // Calculate time difference relative to the target city's current local time
       String remainingText = '';
       if (nextItem != null) {
-        final diff = nextItem.time.difference(DateTime.now());
+        final diff = nextItem.time.difference(targetCityNow);
         if (diff.isNegative) {
           remainingText = isKurmanji
               ? 'دەما بانگیە'
@@ -242,7 +254,7 @@ class PrayerWidgetService {
           : '';
 
       // Progress fraction for iOS ring (0.0 = just started, 1.0 = prayer arrived)
-      final prayerProgress = _calcPrayerProgress(currentItem, nextItem);
+      final prayerProgress = _calcPrayerProgress(currentItem, nextItem, targetCityNow);
 
       // ── Save all data (App Group set above for iOS) ──
       final lat = (schedule['latitude'] as num?)?.toDouble() ?? 36.1911;
@@ -279,18 +291,35 @@ class PrayerWidgetService {
       await _save('selected_prayer_id', nextPrayerId);
       await _save('current_prayer_id', nextPrayerId);
 
-      // Save exact Unix seconds timestamp for every prayer so iOS WidgetKit can
+      await _saveDouble('city_utc_offset', targetUtcOffset);
+      await _save('city_timezone_id', schedule['timezoneId'] as String? ?? 'Asia/Baghdad');
+
+      // Save exact Unix seconds timestamp in UTC for every prayer so iOS WidgetKit can
       // schedule precision timeline switches throughout the day without string guessing.
       for (final item in items) {
-        final sec = item.time.millisecondsSinceEpoch / 1000.0;
+        final prayerUtc = DateTime.utc(
+          item.time.year,
+          item.time.month,
+          item.time.day,
+          item.time.hour,
+          item.time.minute,
+        ).subtract(Duration(minutes: (targetUtcOffset * 60).round()));
+        final sec = prayerUtc.millisecondsSinceEpoch / 1000.0;
         await _saveDouble('${item.id}_timestamp', sec);
         await _save('${item.id}_full_time', _fullTime(item.time));
       }
 
       if (nextItem != null) {
+        final nextUtc = DateTime.utc(
+          nextItem.time.year,
+          nextItem.time.month,
+          nextItem.time.day,
+          nextItem.time.hour,
+          nextItem.time.minute,
+        ).subtract(Duration(minutes: (targetUtcOffset * 60).round()));
         await _saveDouble(
           'next_prayer_timestamp',
-          nextItem.time.millisecondsSinceEpoch / 1000.0,
+          nextUtc.millisecondsSinceEpoch / 1000.0,
         );
       }
 
