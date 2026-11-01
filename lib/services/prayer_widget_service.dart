@@ -158,6 +158,9 @@ class PrayerWidgetService {
                   'Kurdistan'));
       final hijriInfo = schedule['hijriDate'] as HijriDateInfo?;
 
+      final scheduleNextId = schedule['nextId'] as String? ?? 'fajr';
+      final scheduleNextTime = schedule['nextTime'] as DateTime?;
+
       // Find the next upcoming prayer (and the one before it, for progress)
       PrayerTimeItem? nextItem;
       PrayerTimeItem? currentItem; // prayer currently in progress (just before next)
@@ -168,8 +171,11 @@ class PrayerWidgetService {
           break;
         }
       }
-      nextItem ??= items.isNotEmpty ? items.first : null;
-      currentItem ??= items.length > 1 ? items[items.length - 1] : null;
+
+      // If all prayers today passed (e.g. after Isha), next prayer is tomorrow's Fajr
+      final effectiveNextTime = nextItem?.time ?? scheduleNextTime;
+      final effectiveNextId = nextItem?.id ?? scheduleNextId;
+      currentItem ??= items.isNotEmpty ? items.last : null;
 
       // Extract individual prayer times (Clean 2-digit formatted: '04:12')
       String fajr = '--:--';
@@ -203,9 +209,12 @@ class PrayerWidgetService {
         }
       }
 
-      final nextPrayerName = nextItem?.localizedName(lang) ?? (isKurdish ? 'بانگ' : 'Prayer');
-      final nextPrayerTime = nextItem != null ? _fullTime(nextItem.time) : '--:--';
-      final nextPrayerId = nextItem?.id ?? 'fajr';
+      final nextPrayerName = nextItem?.localizedName(lang) ??
+          (effectiveNextId == 'fajr'
+              ? (isKurdish ? 'بەیانی' : (isArabic ? 'الفجر' : 'Fajr'))
+              : (isKurdish ? 'بانگ' : 'Prayer'));
+      final nextPrayerTime = effectiveNextTime != null ? _fullTime(effectiveNextTime) : '--:--';
+      final nextPrayerId = effectiveNextId;
 
       final targetUtcOffset = (schedule['targetUtcOffset'] as num?)?.toDouble() ?? 3.0;
       final targetCityUtc = DateTime.now().toUtc().add(Duration(minutes: (targetUtcOffset * 60).round()));
@@ -220,8 +229,8 @@ class PrayerWidgetService {
 
       // Calculate time difference relative to the target city's current local time
       String remainingText = '';
-      if (nextItem != null) {
-        final diff = nextItem.time.difference(targetCityNow);
+      if (effectiveNextTime != null) {
+        final diff = effectiveNextTime.difference(targetCityNow);
         if (diff.isNegative) {
           remainingText = isKurmanji
               ? 'دەما بانگیە'
@@ -309,13 +318,13 @@ class PrayerWidgetService {
         await _save('${item.id}_full_time', _fullTime(item.time));
       }
 
-      if (nextItem != null) {
+      if (effectiveNextTime != null) {
         final nextUtc = DateTime.utc(
-          nextItem.time.year,
-          nextItem.time.month,
-          nextItem.time.day,
-          nextItem.time.hour,
-          nextItem.time.minute,
+          effectiveNextTime.year,
+          effectiveNextTime.month,
+          effectiveNextTime.day,
+          effectiveNextTime.hour,
+          effectiveNextTime.minute,
         ).subtract(Duration(minutes: (targetUtcOffset * 60).round()));
         await _saveDouble(
           'next_prayer_timestamp',
