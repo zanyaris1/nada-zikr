@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../app_localizations.dart';
+import '../services/app_update_service.dart';
 import '../widgets/app_theme.dart';
 import 'home_screen.dart';
 import 'prayer_times_screen.dart';
@@ -29,6 +30,11 @@ class _MainAppScreenState extends State<MainAppScreen> {
     super.initState();
     _selectedIndex = widget.tabNotifier?.value ?? widget.initialTabIndex;
     widget.tabNotifier?.addListener(_onTabNotifierChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        AppUpdateService.checkForOptionalUpdate(context);
+      }
+    });
   }
 
   @override

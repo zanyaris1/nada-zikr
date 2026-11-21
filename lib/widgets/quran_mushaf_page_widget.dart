@@ -72,7 +72,7 @@ class MushafFramePainter extends CustomPainter {
     final outerPaint = Paint()
       ..color = goldColor.withValues(alpha: 0.6)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6;
+      ..strokeWidth = 1.5;
 
     final outerRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(4, 4, w - 8, h - 8),
@@ -84,29 +84,29 @@ class MushafFramePainter extends CustomPainter {
     final innerPaint = Paint()
       ..color = goldColor.withValues(alpha: 0.35)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.9;
+      ..strokeWidth = 0.85;
 
     final innerRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(9, 9, w - 18, h - 18),
+      Rect.fromLTWH(8, 8, w - 16, h - 16),
       const Radius.circular(5),
     );
     canvas.drawRRect(innerRect, innerPaint);
 
-    // 3. Header separator line (at y = 38)
+    // 3. Header separator line (at y = 36)
     final headerSepPaint = Paint()
-      ..color = goldColor.withValues(alpha: 0.3)
+      ..color = goldColor.withValues(alpha: 0.28)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.8;
-    canvas.drawLine(const Offset(9, 38), Offset(w - 9, 38), headerSepPaint);
+    canvas.drawLine(const Offset(8, 36), Offset(w - 8, 36), headerSepPaint);
 
-    // 4. Footer separator line (at y = h - 38)
-    canvas.drawLine(Offset(9, h - 38), Offset(w - 9, h - 38), headerSepPaint);
+    // 4. Footer separator line (at y = h - 34)
+    canvas.drawLine(Offset(8, h - 34), Offset(w - 8, h - 34), headerSepPaint);
 
     // 5. Four Corner Geometric Star Ornaments
-    _drawCornerOrnament(canvas, 9, 9, goldColor);
-    _drawCornerOrnament(canvas, w - 9, 9, goldColor);
-    _drawCornerOrnament(canvas, 9, h - 9, goldColor);
-    _drawCornerOrnament(canvas, w - 9, h - 9, goldColor);
+    _drawCornerOrnament(canvas, 8, 8, goldColor);
+    _drawCornerOrnament(canvas, w - 8, 8, goldColor);
+    _drawCornerOrnament(canvas, 8, h - 8, goldColor);
+    _drawCornerOrnament(canvas, w - 8, h - 8, goldColor);
   }
 
   void _drawCornerOrnament(Canvas canvas, double x, double y, Color color) {
@@ -114,15 +114,15 @@ class MushafFramePainter extends CustomPainter {
       ..color = color.withValues(alpha: 0.75)
       ..style = PaintingStyle.fill;
 
-    canvas.drawCircle(Offset(x, y), 2.2, dotPaint);
+    canvas.drawCircle(Offset(x, y), 2.0, dotPaint);
 
     final linePaint = Paint()
       ..color = color.withValues(alpha: 0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.7;
 
-    canvas.drawLine(Offset(x - 5, y), Offset(x + 5, y), linePaint);
-    canvas.drawLine(Offset(x, y - 5), Offset(x, y + 5), linePaint);
+    canvas.drawLine(Offset(x - 4, y), Offset(x + 4, y), linePaint);
+    canvas.drawLine(Offset(x, y - 4), Offset(x, y + 4), linePaint);
   }
 
   @override
@@ -132,7 +132,21 @@ class MushafFramePainter extends CustomPainter {
   }
 }
 
+/// Represents a distinct section of ayahs on a page, optionally preceded by a Surah title and Bismillah
+class _AyahBlock {
+  final QuranSurahMeta? surahMeta;
+  final bool showBismillah;
+  final List<QuranAyah> ayahs;
+
+  _AyahBlock({
+    this.surahMeta,
+    this.showBismillah = false,
+    required this.ayahs,
+  });
+}
+
 /// A single authentic Madani Mushaf Page widget (1 to 604)
+/// Top header, justified flowing ayahs starting at top, and bottom page medallion.
 class QuranMushafPageWidget extends StatefulWidget {
   final int pageNumber;
   final List<QuranAyah> ayahs;
@@ -141,6 +155,7 @@ class QuranMushafPageWidget extends StatefulWidget {
   final int? highlightedAyahNumber;
   final Set<String> bookmarkedAyahs;
   final Function(QuranAyah) onAyahTap;
+  final VoidCallback? onOpenJumpSheet;
   final bool isRtl;
   final String language;
 
@@ -153,6 +168,7 @@ class QuranMushafPageWidget extends StatefulWidget {
     required this.highlightedAyahNumber,
     required this.bookmarkedAyahs,
     required this.onAyahTap,
+    this.onOpenJumpSheet,
     required this.isRtl,
     required this.language,
   });
@@ -171,6 +187,148 @@ class _QuranMushafPageWidgetState extends State<QuranMushafPageWidget> {
     }
     _tapRecognizers.clear();
     super.dispose();
+  }
+
+  /// Groups the page's ayahs into blocks, separating when a new Surah starts
+  List<_AyahBlock> _groupIntoBlocks() {
+    final blocks = <_AyahBlock>[];
+    int currentSurah = -1;
+    List<QuranAyah> currentAyahs = [];
+    QuranSurahMeta? blockSurahMeta;
+    bool blockShowBismillah = false;
+
+    void flush() {
+      if (currentAyahs.isNotEmpty) {
+        blocks.add(_AyahBlock(
+          surahMeta: blockSurahMeta,
+          showBismillah: blockShowBismillah,
+          ayahs: List.unmodifiable(currentAyahs),
+        ));
+        currentAyahs = [];
+        blockSurahMeta = null;
+        blockShowBismillah = false;
+      }
+    }
+
+    for (int i = 0; i < widget.ayahs.length; i++) {
+      final ayah = widget.ayahs[i];
+      if (ayah.ayah == 1 || ayah.surah != currentSurah) {
+        flush();
+        currentSurah = ayah.surah;
+        if (ayah.ayah == 1) {
+          final meta = widget.getSurahMeta(ayah.surah);
+          blockSurahMeta = meta;
+          blockShowBismillah = meta != null && meta.number != 9 && meta.number != 1;
+        }
+      }
+      currentAyahs.add(ayah);
+    }
+    flush();
+    return blocks;
+  }
+
+  /// Line height stepped by font size to maintain authentic Madani spacing with diacritics
+  double _getLineHeight(double fontSize) {
+    if (widget.pageNumber <= 2) return 2.25;
+    if (fontSize < 14.5) return 1.85;
+    if (fontSize < 17.0) return 1.95;
+    return 2.05;
+  }
+
+  /// Measures total rendered height of the blocks at a given fontSize
+  double _measureContentHeight(
+    List<_AyahBlock> blocks,
+    double fontSize,
+    double availableWidth,
+  ) {
+    final lineHeight = _getLineHeight(fontSize);
+    double totalHeight = 0;
+
+    for (final block in blocks) {
+      if (block.surahMeta != null) {
+        // Banner height: vertical margin 6 + padding 6 + border 2 + content ~24 = 38
+        totalHeight += 38.0;
+        if (block.showBismillah) {
+          // Bismillah height: vertical padding 3 + text ~19 = 22
+          totalHeight += 22.0;
+        }
+      }
+
+      final spans = <InlineSpan>[];
+      for (final ayah in block.ayahs) {
+        spans.add(
+          TextSpan(
+            text: ayah.text,
+            style: AppTheme.quranAyahText(
+              fontSize: fontSize,
+              height: lineHeight,
+            ),
+          ),
+        );
+        spans.add(
+          TextSpan(
+            text: ' ﴿${toArabicDigits(ayah.ayah)}﴾ ',
+            style: AppTheme.quranAyahText(
+              fontSize: fontSize * 0.72,
+              height: lineHeight,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        );
+      }
+
+      final tp = TextPainter(
+        text: TextSpan(children: spans),
+        textAlign: TextAlign.justify,
+        textDirection: TextDirection.rtl,
+      );
+      tp.layout(maxWidth: availableWidth);
+      totalHeight += tp.size.height + 4.0;
+      tp.dispose();
+    }
+
+    return totalHeight;
+  }
+
+  /// Binary search to find optimal font size ensuring all ayah lines fit without scrolling
+  double _calculateOptimalFontSize({
+    required List<_AyahBlock> blocks,
+    required double availableWidth,
+    required double availableHeight,
+  }) {
+    if (widget.pageNumber <= 2) {
+      // Opening pages (Al-Fatiha, Al-Baqarah 1-5)
+      double low = 18.0;
+      double high = 24.0;
+      double best = low;
+      for (int i = 0; i < 6; i++) {
+        final mid = (low + high) / 2.0;
+        if (_measureContentHeight(blocks, mid, availableWidth) <= availableHeight) {
+          best = mid;
+          low = mid;
+        } else {
+          high = mid;
+        }
+      }
+      return best;
+    }
+
+    // Standard pages (3 to 604)
+    double low = 12.0;
+    double high = 21.0;
+    double best = low;
+
+    for (int i = 0; i < 7; i++) {
+      final mid = (low + high) / 2.0;
+      final h = _measureContentHeight(blocks, mid, availableWidth);
+      if (h <= availableHeight) {
+        best = mid;
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+    return best;
   }
 
   @override
@@ -199,27 +357,38 @@ class _QuranMushafPageWidgetState extends State<QuranMushafPageWidget> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Calculate responsive typography to ensure authentic Madani Mushaf page fit
-        final isSmallScreen = constraints.maxHeight < 640;
-        final hasSurahHeader = widget.ayahs.any((a) => a.ayah == 1);
-        final ayahCount = widget.ayahs.length;
+        final blocks = _groupIntoBlocks();
 
-        double fontSize;
-        double lineHeight;
-        if (widget.pageNumber <= 2) {
-          // Opening pages Al-Fatiha and Al-Baqarah 1-5 have fewer ayahs, larger elegant calligraphy
-          fontSize = isSmallScreen ? 22 : 25;
-          lineHeight = 2.4;
-        } else if (hasSurahHeader || ayahCount > 15) {
-          fontSize = isSmallScreen ? 16.5 : 18.5;
-          lineHeight = 2.05;
-        } else {
-          fontSize = isSmallScreen ? 18.0 : 20.0;
-          lineHeight = 2.15;
-        }
+        const double cardMarginH = 10.0;
+        const double cardMarginV = 4.0;
+        const double cardPadH = 12.0;
+        const double cardPadTop = 6.0;
+        const double cardPadBottom = 6.0;
+        const double headerHeight = 24.0;
+        const double headerSpacing = 4.0;
+        const double footerHeight = 24.0;
+        const double footerSpacing = 4.0;
+
+        final double availableWidth = (constraints.maxWidth - (cardMarginH * 2) - (cardPadH * 2)).clamp(100.0, 1400.0);
+        final double availableBodyHeight = (constraints.maxHeight -
+                (cardMarginV * 2) -
+                cardPadTop -
+                cardPadBottom -
+                headerHeight -
+                headerSpacing -
+                footerHeight -
+                footerSpacing)
+            .clamp(50.0, 3000.0);
+
+        final optimalFontSize = _calculateOptimalFontSize(
+          blocks: blocks,
+          availableWidth: availableWidth,
+          availableHeight: availableBodyHeight,
+        );
+        final optimalLineHeight = _getLineHeight(optimalFontSize);
 
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          margin: const EdgeInsets.symmetric(horizontal: cardMarginH, vertical: cardMarginV),
           decoration: BoxDecoration(
             color: AppColors.darkPanel,
             borderRadius: BorderRadius.circular(16),
@@ -241,14 +410,14 @@ class _QuranMushafPageWidgetState extends State<QuranMushafPageWidget> {
               borderColor: AppColors.panelBorderColor,
             ),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+              padding: const EdgeInsets.fromLTRB(cardPadH, cardPadTop, cardPadH, cardPadBottom),
               child: Column(
                 children: [
                   // ══════════════════════════════════════════════════════════════
-                  // TOP HEADER BAR — Surah Name & Juz Title
+                  // 1. TOP HEADER BAR — Surah Name & Juz Title (like before edit)
                   // ══════════════════════════════════════════════════════════════
                   SizedBox(
-                    height: 28,
+                    height: headerHeight,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -268,7 +437,7 @@ class _QuranMushafPageWidgetState extends State<QuranMushafPageWidget> {
                             ),
                           ),
                         ),
-                        // Center Cartouche Badge: Hizb or Page range
+                        // Center Cartouche Badge: Hizb or Juz badge
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
                           decoration: BoxDecoration(
@@ -282,7 +451,7 @@ class _QuranMushafPageWidgetState extends State<QuranMushafPageWidget> {
                           child: Text(
                             '۞ الجُزْءُ ${toArabicDigits(juzNumber)} ۞',
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 9.5,
                               fontWeight: FontWeight.bold,
                               color: AppColors.gold,
                             ),
@@ -307,42 +476,65 @@ class _QuranMushafPageWidgetState extends State<QuranMushafPageWidget> {
                     ),
                   ),
 
-                  const SizedBox(height: 6),
+                  const SizedBox(height: headerSpacing),
 
                   // ══════════════════════════════════════════════════════════════
-                  // PAGE BODY — Authentic Justified Flowing Ayahs with Headers
+                  // 2. PAGE BODY — Ayahs starting cleanly at TOP with zero scroll
                   // ══════════════════════════════════════════════════════════════
                   Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: _buildPageBody(context, fontSize, lineHeight),
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.topCenter,
+                        child: SizedBox(
+                          width: availableWidth,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              for (final block in blocks) ...[
+                                if (block.surahMeta != null) ...[
+                                  _buildSurahTitleBanner(block.surahMeta!),
+                                  if (block.showBismillah) _buildBismillahBanner(),
+                                ],
+                                _buildAyahsParagraph(block.ayahs, optimalFontSize, optimalLineHeight),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
 
-                  const SizedBox(height: 4),
+                  const SizedBox(height: footerSpacing),
 
                   // ══════════════════════════════════════════════════════════════
-                  // BOTTOM FOOTER BAR — Ornate Eastern Arabic Page Medallion
+                  // 3. BOTTOM FOOTER BAR — Ornate Eastern Arabic Page Medallion
                   // ══════════════════════════════════════════════════════════════
                   SizedBox(
-                    height: 26,
+                    height: footerHeight,
                     child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: AppColors.gold.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.gold.withValues(alpha: 0.35),
-                            width: 0.7,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: widget.onOpenJumpSheet,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.gold.withValues(alpha: 0.35),
+                              width: 0.7,
+                            ),
                           ),
-                        ),
-                        child: Text(
-                          '﴿ ${toArabicDigits(widget.pageNumber)} ﴾',
-                          style: AppTheme.quranAyahText(
-                            fontSize: 14,
-                            color: AppColors.gold,
-                            fontWeight: FontWeight.bold,
+                          child: Text(
+                            '﴿ ${toArabicDigits(widget.pageNumber)} ﴾',
+                            style: AppTheme.quranAyahText(
+                              fontSize: 13.5,
+                              color: AppColors.gold,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
@@ -357,76 +549,24 @@ class _QuranMushafPageWidgetState extends State<QuranMushafPageWidget> {
     );
   }
 
-  Widget _buildPageBody(BuildContext context, double fontSize, double lineHeight) {
-    final widgets = <Widget>[];
-
-    // Group ayahs on this page into blocks by Surah start
-    int currentSurah = -1;
-    final currentBlock = <QuranAyah>[];
-
-    void flushBlock() {
-      if (currentBlock.isNotEmpty) {
-        widgets.add(_buildAyahsParagraph(currentBlock, fontSize, lineHeight));
-        currentBlock.clear();
-      }
-    }
-
-    for (int i = 0; i < widget.ayahs.length; i++) {
-      final ayah = widget.ayahs[i];
-
-      // Detect if this is the start of a Surah on this page
-      if (ayah.ayah == 1 || ayah.surah != currentSurah) {
-        flushBlock();
-        currentSurah = ayah.surah;
-        final surahMeta = widget.getSurahMeta(ayah.surah);
-
-        if (ayah.ayah == 1 && surahMeta != null) {
-          // Render authentic golden Surah Header Banner
-          widgets.add(_buildSurahTitleBanner(surahMeta));
-
-          // Render Bismillah calligraphy banner if not Surah 9 (At-Tawbah) and not Surah 1 (where Bismillah is Ayah 1)
-          if (surahMeta.number != 9 && surahMeta.number != 1) {
-            widgets.add(_buildBismillahBanner());
-          }
-        }
-      }
-
-      currentBlock.add(ayah);
-    }
-
-    flushBlock();
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: widgets,
-    );
-  }
-
   /// Authentic Islamic floral cartouche / banner for Surah Titles
   Widget _buildSurahTitleBanner(QuranSurahMeta surah) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.gold.withValues(alpha: 0.22),
+            AppColors.gold.withValues(alpha: 0.2),
             AppColors.darkBgAlt,
-            AppColors.gold.withValues(alpha: 0.22),
+            AppColors.gold.withValues(alpha: 0.2),
           ],
         ),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.gold.withValues(alpha: 0.6),
-          width: 1.2,
+          color: AppColors.gold.withValues(alpha: 0.55),
+          width: 1.0,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.gold.withValues(alpha: 0.08),
-            blurRadius: 8,
-          ),
-        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -434,27 +574,27 @@ class _QuranMushafPageWidgetState extends State<QuranMushafPageWidget> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.star_rounded, color: AppColors.gold, size: 14),
-              const SizedBox(width: 8),
+              Icon(Icons.star_rounded, color: AppColors.gold, size: 13),
+              const SizedBox(width: 6),
               Text(
                 'سُورَةُ ${surah.arabicName}',
                 textAlign: TextAlign.center,
                 textDirection: TextDirection.rtl,
                 style: AppTheme.quranAyahText(
-                  fontSize: 18,
+                  fontSize: 16,
                   color: AppColors.gold,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(width: 8),
-              Icon(Icons.star_rounded, color: AppColors.gold, size: 14),
+              const SizedBox(width: 6),
+              Icon(Icons.star_rounded, color: AppColors.gold, size: 13),
             ],
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 1),
           Text(
             '${surah.revelationType == 'Meccan' ? 'مَكِّيَّةٌ' : 'مَدَنِيَّةٌ'}  •  ${toArabicDigits(surah.numberOfAyahs)} آيَاتٍ',
             style: TextStyle(
-              fontSize: 10.5,
+              fontSize: 10,
               fontWeight: FontWeight.w600,
               color: AppColors.gold.withValues(alpha: 0.8),
             ),
@@ -464,17 +604,17 @@ class _QuranMushafPageWidgetState extends State<QuranMushafPageWidget> {
     );
   }
 
-  /// Calligraphic Bismillah Banner with ornamental side flourishes
+  /// Calligraphic Bismillah Banner with ornamental flourishes
   Widget _buildBismillahBanner() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Center(
         child: Text(
           'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
           textAlign: TextAlign.center,
           textDirection: TextDirection.rtl,
           style: AppTheme.quranAyahText(
-            fontSize: 17.5,
+            fontSize: 15,
             color: AppColors.cream,
             fontWeight: FontWeight.bold,
           ),
@@ -555,7 +695,7 @@ class _QuranMushafPageWidgetState extends State<QuranMushafPageWidget> {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Text.rich(
         TextSpan(children: spans),
         textAlign: TextAlign.justify,
@@ -570,6 +710,7 @@ class _QuranMushafPageWidgetState extends State<QuranMushafPageWidget> {
 }
 
 /// Floating bottom navigation bar for Real Mushaf Page Mode
+/// Sleek, low-profile design that maximizes height for the ayah lines above it.
 class MushafBottomNavigationBar extends StatelessWidget {
   final int currentPage;
   final int totalPages;
@@ -598,80 +739,150 @@ class MushafBottomNavigationBar extends StatelessWidget {
                 ? 'صفحة ${toArabicDigits(currentPage)} من ${toArabicDigits(totalPages)}'
                 : 'Page $currentPage of $totalPages';
 
-    return SafeArea(
-      top: false,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.darkBgAlt.withValues(alpha: 0.94),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: AppColors.gold.withValues(alpha: 0.35),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.5),
-              blurRadius: 18,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Next Page (in RTL, moving forward in Mushaf is left arrow / next)
-            IconButton(
-              icon: const Icon(Icons.arrow_back_ios_rounded, size: 18),
-              color: currentPage < totalPages ? AppColors.gold : AppColors.mutedText,
-              tooltip: 'Next Page',
-              onPressed: currentPage < totalPages ? onNextPage : null,
-            ),
+    final nextLabel = language == 'kmr'
+        ? 'پاشتر'
+        : language == 'ku'
+            ? 'دواتر'
+            : language == 'ar'
+                ? 'التالي'
+                : 'Next';
 
-            // Center: Clickable Page Badge to open Jump Sheet
-            InkWell(
-              borderRadius: BorderRadius.circular(16),
+    final prevLabel = language == 'kmr'
+        ? 'پێشتر'
+        : language == 'ku'
+            ? 'پێشتر'
+            : language == 'ar'
+                ? 'السابق'
+                : 'Prev';
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 2, 16, 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.darkBgAlt.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.gold.withValues(alpha: 0.35),
+          width: 0.8,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Next Page (in RTL, forward is left arrow / next)
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: currentPage < totalPages ? onNextPage : null,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.arrow_back_ios_rounded,
+                      size: 13,
+                      color: currentPage < totalPages
+                          ? AppColors.gold
+                          : AppColors.mutedText.withValues(alpha: 0.4),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      nextLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: currentPage < totalPages
+                            ? AppColors.gold
+                            : AppColors.mutedText.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Center: Clickable Page Badge to open Jump Sheet
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
               onTap: onOpenJumpSheet,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.gold.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(16),
+                  color: AppColors.gold.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: AppColors.gold.withValues(alpha: 0.4),
-                    width: 0.8,
+                    color: AppColors.gold.withValues(alpha: 0.3),
+                    width: 0.7,
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.auto_stories_rounded, color: AppColors.gold, size: 16),
-                    const SizedBox(width: 8),
+                    Icon(Icons.auto_stories_rounded, color: AppColors.gold, size: 13),
+                    const SizedBox(width: 6),
                     Text(
                       pageLabel,
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.bold,
                         color: AppColors.gold,
                       ),
                     ),
                     const SizedBox(width: 4),
-                    Icon(Icons.keyboard_arrow_up_rounded, color: AppColors.gold, size: 18),
+                    Icon(Icons.unfold_more_rounded, color: AppColors.gold, size: 13),
                   ],
                 ),
               ),
             ),
+          ),
 
-            // Previous Page (in RTL, moving backward in Mushaf is right arrow / prev)
-            IconButton(
-              icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-              color: currentPage > 1 ? AppColors.gold : AppColors.mutedText,
-              tooltip: 'Previous Page',
-              onPressed: currentPage > 1 ? onPreviousPage : null,
+          // Previous Page (in RTL, backward is right arrow / prev)
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: currentPage > 1 ? onPreviousPage : null,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      prevLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: currentPage > 1
+                            ? AppColors.gold
+                            : AppColors.mutedText.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 13,
+                      color: currentPage > 1
+                          ? AppColors.gold
+                          : AppColors.mutedText.withValues(alpha: 0.4),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

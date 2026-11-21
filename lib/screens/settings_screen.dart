@@ -783,7 +783,51 @@ class _SettingsScreenState extends State<SettingsScreen>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 10),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () async {
+                              AppHaptics.selectionClick();
+                              final uri = Uri.parse(
+                                  'https://www.facebook.com/share/1FzxUSj2pK/?mibextid=wwXIfr');
+                              try {
+                                await launchUrl(uri,
+                                    mode: LaunchMode.externalApplication);
+                              } catch (_) {}
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1877F2).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0xFF1877F2).withValues(alpha: 0.4),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.facebook,
+                                    color: Color(0xFF1877F2),
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Facebook',
+                                    style: AppTheme.englishText(
+                                      fontSize: 12,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
                           Text(
                             'v1.0.0 (Kurdish Edition)',
                             style: AppTheme.englishText(
@@ -1576,7 +1620,51 @@ class _SettingsScreenState extends State<SettingsScreen>
                               fontSize: 12, color: AppColors.cream),
                         ),
                       ],
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () async {
+                          AppHaptics.selectionClick();
+                          final uri = Uri.parse(
+                              'https://www.facebook.com/share/1FzxUSj2pK/?mibextid=wwXIfr');
+                          try {
+                            await launchUrl(uri,
+                                mode: LaunchMode.externalApplication);
+                          } catch (_) {}
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1877F2).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFF1877F2).withValues(alpha: 0.4),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.facebook,
+                                color: Color(0xFF1877F2),
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Facebook',
+                                style: AppTheme.englishText(
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
                       Text(
                         lang == 'kmr'
                             ? '«داخوازێ ژ پەروەردگاری دکەین بکەتە خێر و قەبوول بکەت»'

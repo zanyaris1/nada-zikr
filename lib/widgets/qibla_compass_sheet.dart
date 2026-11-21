@@ -21,6 +21,7 @@ class KaabaIconWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppColors.current.isDark;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       width: size,
@@ -29,16 +30,18 @@ class KaabaIconWidget extends StatelessWidget {
         color: const Color(0xFF121212),
         borderRadius: BorderRadius.circular(size * 0.22),
         border: Border.all(
-          color: isGlowing ? const Color(0xFFFFE57F) : AppColors.gold,
+          color: isGlowing
+              ? (isDark ? const Color(0xFFFFE57F) : AppColors.gold)
+              : AppColors.gold,
           width: isGlowing ? 2.5 : 2.0,
         ),
         boxShadow: [
           BoxShadow(
             color: isGlowing
-                ? AppColors.gold.withValues(alpha: 0.95)
-                : AppColors.gold.withValues(alpha: 0.6),
-            blurRadius: isGlowing ? 24 : 14,
-            spreadRadius: isGlowing ? 4 : 1,
+                ? AppColors.gold.withValues(alpha: isDark ? 0.95 : 0.6)
+                : AppColors.gold.withValues(alpha: isDark ? 0.4 : 0.15),
+            blurRadius: isGlowing ? 20 : 6,
+            spreadRadius: isGlowing ? 3 : 0,
           ),
         ],
       ),
@@ -51,12 +54,12 @@ class KaabaIconWidget extends StatelessWidget {
             right: 0,
             child: Container(
               height: size * 0.16,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    AppColors.gold,
-                    const Color(0xFFFFF0B3),
-                    AppColors.gold,
+                    Color(0xFFD4AF37),
+                    Color(0xFFFFF0B3),
+                    Color(0xFFD4AF37),
                   ],
                 ),
               ),
@@ -98,11 +101,11 @@ class CompassDialPainter extends CustomPainter {
     final radius = size.width / 2;
 
     final tickPaint = Paint()
-      ..color = secondaryColor.withValues(alpha: 0.35)
+      ..color = secondaryColor.withValues(alpha: 0.45)
       ..strokeWidth = 1.0;
 
     final majorTickPaint = Paint()
-      ..color = primaryColor.withValues(alpha: 0.85)
+      ..color = primaryColor.withValues(alpha: 0.9)
       ..strokeWidth = 2.0;
 
     // Draw 60 tick lines around the perimeter (every 6 degrees)
@@ -126,17 +129,20 @@ class CompassDialPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CompassDialPainter oldDelegate) =>
+      oldDelegate.primaryColor != primaryColor || oldDelegate.secondaryColor != secondaryColor;
 }
 
 /// Custom Painter for the Sleek Full-Length Narrow Needle Spanning Across the Dial.
 class NarrowNeedlePainter extends CustomPainter {
   final Color goldColor;
   final bool isAligned;
+  final bool isDark;
 
   NarrowNeedlePainter({
     required this.goldColor,
     this.isAligned = false,
+    this.isDark = true,
   });
 
   @override
@@ -144,7 +150,7 @@ class NarrowNeedlePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final needleRadius = size.height / 2 - 25;
 
-    final activeColor = isAligned ? const Color(0xFFFFEA00) : goldColor;
+    final activeColor = isAligned ? (isDark ? const Color(0xFFFFEA00) : goldColor) : goldColor;
 
     // Top Pointer (Golden Narrow Arrow pointing up)
     final topPath = Path()
@@ -159,7 +165,9 @@ class NarrowNeedlePainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          isAligned ? const Color(0xFFFFFFE0) : const Color(0xFFFFF2A1),
+          isAligned
+              ? (isDark ? const Color(0xFFFFFFE0) : const Color(0xFFFFF2A1))
+              : (isDark ? const Color(0xFFFFF2A1) : const Color(0xFFE5A93C)),
           activeColor,
           activeColor.withValues(alpha: 0.8),
         ],
@@ -179,17 +187,24 @@ class NarrowNeedlePainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.bottomCenter,
         end: Alignment.topCenter,
-        colors: [
-          Colors.white.withValues(alpha: 0.4),
-          Colors.white.withValues(alpha: 0.15),
-        ],
+        colors: isDark
+            ? [
+                Colors.white.withValues(alpha: 0.4),
+                Colors.white.withValues(alpha: 0.15),
+              ]
+            : [
+                const Color(0xFF6B5843).withValues(alpha: 0.5),
+                const Color(0xFF6B5843).withValues(alpha: 0.2),
+              ],
       ).createShader(Rect.fromLTWH(0, center.dy, size.width, needleRadius));
 
     canvas.drawPath(bottomPath, bottomPaint);
 
     // Golden Laser Edge Line up to tip
     final linePaint = Paint()
-      ..color = isAligned ? Colors.white : const Color(0xFFFFF8DC)
+      ..color = isAligned
+          ? (isDark ? Colors.white : goldColor)
+          : (isDark ? const Color(0xFFFFF8DC) : const Color(0xFFD4AF37))
       ..strokeWidth = 1.4;
 
     canvas.drawLine(Offset(center.dx, center.dy), Offset(center.dx, center.dy - needleRadius), linePaint);
@@ -197,7 +212,9 @@ class NarrowNeedlePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant NarrowNeedlePainter oldDelegate) =>
-      oldDelegate.isAligned != isAligned || oldDelegate.goldColor != goldColor;
+      oldDelegate.isAligned != isAligned ||
+      oldDelegate.goldColor != goldColor ||
+      oldDelegate.isDark != isDark;
 }
 
 /// Interactive Real-Time Qibla Compass Sheet with Verified Live Location & Compass Heading.
@@ -337,6 +354,8 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
     final isKurmanji = lang == 'kmr';
     final isKurdish = lang == 'ku' || lang == 'kmr';
     final isArabic = lang == 'ar';
+    final isDark = AppColors.current.isDark;
+    final alignedAccentColor = isDark ? const Color(0xFFFFD700) : AppColors.gold;
 
     final needleAngleRad = ((_qiblaBearing - _smoothHeading) * math.pi / 180.0);
     final dialAngleRad = (-_smoothHeading * math.pi / 180.0);
@@ -369,24 +388,38 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
               : (isArabic ? 'مستشعر البوصلة غير متوفر' : 'Compass Sensor Unavailable'));
     }
 
+    final statusColor = _hasSensor
+        ? (_isAligned
+            ? alignedAccentColor
+            : (isDark ? Colors.greenAccent : const Color(0xFF1B6E32)))
+        : (isDark ? Colors.orangeAccent : const Color(0xFFC05600));
+
+    final statusBg = _hasSensor
+        ? (_isAligned
+            ? AppColors.gold.withValues(alpha: isDark ? 0.2 : 0.12)
+            : (isDark ? Colors.green.withValues(alpha: 0.15) : const Color(0xFF1B6E32).withValues(alpha: 0.1)))
+        : (isDark ? Colors.orange.withValues(alpha: 0.15) : const Color(0xFFC05600).withValues(alpha: 0.1));
+
+    final statusBorder = statusColor.withValues(alpha: isDark ? 0.5 : 0.35);
+
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.9,
       ),
       decoration: BoxDecoration(
-        color: AppColors.darkPanel,
+        color: isDark ? AppColors.darkPanel : AppColors.panelColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
         border: Border.all(
           color: _isAligned
-              ? const Color(0xFFFFD700)
-              : AppColors.gold.withValues(alpha: 0.35),
+              ? alignedAccentColor
+              : (isDark ? AppColors.gold.withValues(alpha: 0.35) : AppColors.panelBorderColor),
           width: _isAligned ? 2.0 : 1.0,
         ),
         boxShadow: [
           BoxShadow(
             color: _isAligned
-                ? AppColors.gold.withValues(alpha: 0.3)
-                : Colors.black.withValues(alpha: 0.6),
+                ? AppColors.gold.withValues(alpha: isDark ? 0.3 : 0.15)
+                : (isDark ? Colors.black.withValues(alpha: 0.6) : Colors.black.withValues(alpha: 0.08)),
             blurRadius: 35,
             spreadRadius: 5,
           ),
@@ -401,7 +434,7 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
             width: 48,
             height: 5,
             decoration: BoxDecoration(
-              color: _isAligned ? AppColors.gold : AppColors.gold.withValues(alpha: 0.4),
+              color: _isAligned ? alignedAccentColor : (isDark ? AppColors.gold.withValues(alpha: 0.4) : AppColors.panelBorderColor),
               borderRadius: BorderRadius.circular(10),
             ),
           ),
@@ -420,7 +453,7 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                         children: [
                           Icon(
                             Icons.explore_rounded,
-                            color: _isAligned ? const Color(0xFFFFD700) : AppColors.gold,
+                            color: _isAligned ? alignedAccentColor : AppColors.gold,
                             size: 22,
                           ),
                           const SizedBox(width: 8),
@@ -436,16 +469,16 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                               style: isKurdish
                                   ? AppTheme.kurdishTitle(
                                       fontSize: 19,
-                                      color: _isAligned ? const Color(0xFFFFD700) : AppColors.gold,
+                                      color: _isAligned ? alignedAccentColor : AppColors.gold,
                                     )
                                   : (isArabic
                                       ? AppTheme.arabicTitle(
                                           fontSize: 19,
-                                          color: _isAligned ? const Color(0xFFFFD700) : AppColors.gold,
+                                          color: _isAligned ? alignedAccentColor : AppColors.gold,
                                         )
                                       : AppTheme.englishTitle(
                                           fontSize: 18,
-                                          color: _isAligned ? const Color(0xFFFFD700) : AppColors.gold,
+                                          color: _isAligned ? alignedAccentColor : AppColors.gold,
                                         )),
                             ),
                           ),
@@ -480,7 +513,7 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
               ],
             ),
           ),
-          const Divider(color: Colors.white10, height: 16),
+          Divider(color: AppColors.panelBorderColor, height: 16),
 
           Expanded(
             child: SingleChildScrollView(
@@ -491,17 +524,9 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _hasSensor
-                          ? (_isAligned
-                              ? Colors.amber.withValues(alpha: 0.2)
-                              : Colors.green.withValues(alpha: 0.15))
-                          : Colors.orange.withValues(alpha: 0.15),
+                      color: statusBg,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _hasSensor
-                            ? (_isAligned ? Colors.amber : Colors.green.withValues(alpha: 0.5))
-                            : Colors.orange.withValues(alpha: 0.5),
-                      ),
+                      border: Border.all(color: statusBorder),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -511,9 +536,7 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                           height: 8,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: _hasSensor
-                                ? (_isAligned ? const Color(0xFFFFD700) : Colors.greenAccent)
-                                : Colors.orangeAccent,
+                            color: statusColor,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -526,24 +549,18 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                                 ? AppTheme.kurdishText(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: _hasSensor
-                                        ? (_isAligned ? const Color(0xFFFFD700) : Colors.greenAccent)
-                                        : Colors.orangeAccent,
+                                    color: statusColor,
                                   )
                                 : (isArabic
                                     ? AppTheme.arabicText(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: _hasSensor
-                                            ? (_isAligned ? const Color(0xFFFFD700) : Colors.greenAccent)
-                                            : Colors.orangeAccent,
+                                        color: statusColor,
                                       )
                                     : TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: _hasSensor
-                                            ? (_isAligned ? const Color(0xFFFFD700) : Colors.greenAccent)
-                                            : Colors.orangeAccent,
+                                        color: statusColor,
                                       )),
                           ),
                         ),
@@ -569,13 +586,13 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                               width: 4,
                               height: 14,
                               decoration: BoxDecoration(
-                                color: _isAligned ? const Color(0xFFFFD700) : AppColors.gold,
+                                color: _isAligned ? alignedAccentColor : AppColors.gold,
                                 borderRadius: BorderRadius.circular(2),
                                 boxShadow: [
                                   BoxShadow(
                                     color: _isAligned
                                         ? AppColors.gold
-                                        : AppColors.gold.withValues(alpha: 0.5),
+                                        : AppColors.gold.withValues(alpha: isDark ? 0.5 : 0.25),
                                     blurRadius: 8,
                                   ),
                                 ],
@@ -598,15 +615,15 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                                     gradient: RadialGradient(
                                       colors: [
                                         _isAligned
-                                            ? AppColors.gold.withValues(alpha: 0.35)
-                                            : AppColors.gold.withValues(alpha: 0.15),
+                                            ? AppColors.gold.withValues(alpha: isDark ? 0.35 : 0.2)
+                                            : AppColors.gold.withValues(alpha: isDark ? 0.15 : 0.08),
                                         Colors.transparent,
                                       ],
                                     ),
                                     border: Border.all(
                                       color: _isAligned
-                                          ? const Color(0xFFFFD700)
-                                          : AppColors.gold.withValues(alpha: 0.3),
+                                          ? alignedAccentColor
+                                          : AppColors.gold.withValues(alpha: isDark ? 0.3 : 0.2),
                                       width: _isAligned ? 2.0 : 1.5,
                                     ),
                                   ),
@@ -623,16 +640,18 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                               height: 280,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: const Color(0xFF0F1E16),
+                                color: isDark ? const Color(0xFF0F1E16) : AppColors.panelColor,
                                 border: Border.all(
                                   color: _isAligned
-                                      ? const Color(0xFFFFD700)
-                                      : AppColors.gold.withValues(alpha: 0.4),
+                                      ? alignedAccentColor
+                                      : (isDark ? AppColors.gold.withValues(alpha: 0.4) : AppColors.panelBorderColor),
                                   width: 2,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.7),
+                                    color: isDark
+                                        ? Colors.black.withValues(alpha: 0.7)
+                                        : Colors.black.withValues(alpha: 0.08),
                                     blurRadius: 20,
                                     spreadRadius: 2,
                                   ),
@@ -641,7 +660,7 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                               child: CustomPaint(
                                 painter: CompassDialPainter(
                                   primaryColor: AppColors.gold,
-                                  secondaryColor: AppColors.cream,
+                                  secondaryColor: isDark ? const Color(0xFFF7F2E7) : AppColors.faintText,
                                 ),
                                 child: Stack(
                                   alignment: Alignment.center,
@@ -699,6 +718,7 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                                     painter: NarrowNeedlePainter(
                                       goldColor: AppColors.gold,
                                       isAligned: _isAligned,
+                                      isDark: isDark,
                                     ),
                                   ),
                                   Positioned(
@@ -732,10 +752,10 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                                         const Color(0xFF7A581A),
                                       ],
                               ),
-                              border: Border.all(color: Colors.white, width: 1.5),
+                              border: Border.all(color: isDark ? Colors.white : AppColors.gold, width: 1.5),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.7),
+                                  color: isDark ? Colors.black.withValues(alpha: 0.7) : Colors.black.withValues(alpha: 0.15),
                                   blurRadius: 10,
                                   spreadRadius: 2,
                                 ),
@@ -745,9 +765,9 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                               child: Container(
                                 width: 12,
                                 height: 12,
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Color(0xFF222222),
+                                  color: isDark ? const Color(0xFF222222) : AppColors.gold,
                                 ),
                               ),
                             ),
@@ -798,10 +818,10 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                                       ? '${_heading!.toStringAsFixed(1)}° $currentHeadingCardinal'
                                       : '---°',
                                   style: isKurdish
-                                      ? AppTheme.kurdishTitle(fontSize: 14, color: AppColors.cream)
+                                      ? AppTheme.kurdishTitle(fontSize: 14, color: isDark ? AppColors.cream : AppColors.lightText)
                                       : (isArabic
-                                          ? AppTheme.arabicTitle(fontSize: 14, color: AppColors.cream)
-                                          : AppTheme.englishTitle(fontSize: 15, color: AppColors.cream)),
+                                          ? AppTheme.arabicTitle(fontSize: 14, color: isDark ? AppColors.cream : AppColors.lightText)
+                                          : AppTheme.englishTitle(fontSize: 15, color: isDark ? AppColors.cream : AppColors.lightText)),
                                 ),
                               ),
                             ],
@@ -817,7 +837,7 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                             color: AppColors.panelColor,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: _isAligned ? AppColors.gold : AppColors.panelBorderColor,
+                              color: _isAligned ? alignedAccentColor : AppColors.panelBorderColor,
                               width: _isAligned ? 1.5 : 1.0,
                             ),
                           ),
@@ -825,7 +845,7 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                             children: [
                               Icon(
                                 Icons.navigation_rounded,
-                                color: _isAligned ? const Color(0xFFFFD700) : AppColors.gold,
+                                color: _isAligned ? alignedAccentColor : AppColors.gold,
                                 size: 22,
                               ),
                               const SizedBox(height: 6),
@@ -852,16 +872,16 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                                   style: isKurdish
                                       ? AppTheme.kurdishTitle(
                                           fontSize: 14,
-                                          color: _isAligned ? const Color(0xFFFFD700) : AppColors.cream,
+                                          color: _isAligned ? alignedAccentColor : (isDark ? AppColors.cream : AppColors.lightText),
                                         )
                                       : (isArabic
                                           ? AppTheme.arabicTitle(
                                               fontSize: 14,
-                                              color: _isAligned ? const Color(0xFFFFD700) : AppColors.cream,
+                                              color: _isAligned ? alignedAccentColor : (isDark ? AppColors.cream : AppColors.lightText),
                                             )
                                           : AppTheme.englishTitle(
                                               fontSize: 15,
-                                              color: _isAligned ? const Color(0xFFFFD700) : AppColors.cream,
+                                              color: _isAligned ? alignedAccentColor : (isDark ? AppColors.cream : AppColors.lightText),
                                             )),
                                 ),
                               ),
@@ -908,10 +928,10 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                                           ? '${_distanceKm.toStringAsFixed(0)} كم'
                                           : '${_distanceKm.toStringAsFixed(0)} km'),
                                   style: isKurdish
-                                      ? AppTheme.kurdishTitle(fontSize: 14, color: AppColors.cream)
+                                      ? AppTheme.kurdishTitle(fontSize: 14, color: isDark ? AppColors.cream : AppColors.lightText)
                                       : (isArabic
-                                          ? AppTheme.arabicTitle(fontSize: 14, color: AppColors.cream)
-                                          : AppTheme.englishTitle(fontSize: 15, color: AppColors.cream)),
+                                          ? AppTheme.arabicTitle(fontSize: 14, color: isDark ? AppColors.cream : AppColors.lightText)
+                                          : AppTheme.englishTitle(fontSize: 15, color: isDark ? AppColors.cream : AppColors.lightText)),
                                 ),
                               ),
                             ],
@@ -929,13 +949,13 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: _isAligned
-                          ? AppColors.gold.withValues(alpha: 0.25)
-                          : AppColors.gold.withValues(alpha: 0.1),
+                          ? AppColors.gold.withValues(alpha: isDark ? 0.25 : 0.15)
+                          : (isDark ? AppColors.gold.withValues(alpha: 0.1) : AppColors.panelColor),
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
                         color: _isAligned
-                            ? const Color(0xFFFFD700)
-                            : AppColors.gold.withValues(alpha: 0.3),
+                            ? alignedAccentColor
+                            : (isDark ? AppColors.gold.withValues(alpha: 0.3) : AppColors.panelBorderColor),
                         width: _isAligned ? 1.5 : 1.0,
                       ),
                     ),
@@ -943,7 +963,7 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                       children: [
                         Icon(
                           _isAligned ? Icons.check_circle_rounded : Icons.info_outline_rounded,
-                          color: _isAligned ? const Color(0xFFFFD700) : AppColors.gold,
+                          color: _isAligned ? alignedAccentColor : AppColors.gold,
                           size: 22,
                         ),
                         const SizedBox(width: 12),
@@ -967,16 +987,22 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
                             style: isKurdish
                                 ? AppTheme.kurdishText(
                                     fontSize: 12,
-                                    color: _isAligned ? Colors.white : AppColors.cream,
+                                    color: _isAligned
+                                        ? (isDark ? Colors.white : AppColors.lightText)
+                                        : (isDark ? AppColors.cream : AppColors.lightText),
                                   )
                                 : (isArabic
                                     ? AppTheme.arabicText(
                                         fontSize: 12,
-                                        color: _isAligned ? Colors.white : AppColors.cream,
+                                        color: _isAligned
+                                            ? (isDark ? Colors.white : AppColors.lightText)
+                                            : (isDark ? AppColors.cream : AppColors.lightText),
                                       )
                                     : AppTheme.englishText(
                                         fontSize: 12,
-                                        color: _isAligned ? Colors.white : AppColors.cream,
+                                        color: _isAligned
+                                            ? (isDark ? Colors.white : AppColors.lightText)
+                                            : (isDark ? AppColors.cream : AppColors.lightText),
                                       )),
                           ),
                         ),
@@ -996,16 +1022,32 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
   Widget _cardinalLabel(String label, {bool isNorth = false, required String lang}) {
     final isKu = lang == 'ku' || lang == 'kmr';
     final isAr = lang == 'ar';
+    final isDark = AppColors.current.isDark;
+
+    final Color badgeBg;
+    final Color badgeBorder;
+    final Color textColor;
+
+    if (isNorth) {
+      badgeBg = AppColors.gold;
+      badgeBorder = isDark ? const Color(0xFFFFD700) : AppColors.gold;
+      textColor = isDark ? Colors.black : Colors.white;
+    } else {
+      badgeBg = isDark ? Colors.black.withValues(alpha: 0.65) : AppColors.darkBgAlt;
+      badgeBorder = isDark ? Colors.white24 : AppColors.panelBorderColor;
+      textColor = isDark ? const Color(0xFFF7F2E7) : AppColors.lightText;
+    }
+
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: (isKu || isAr) ? 6 : 8,
         vertical: 3,
       ),
       decoration: BoxDecoration(
-        color: isNorth ? AppColors.gold : Colors.black.withValues(alpha: 0.65),
+        color: badgeBg,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isNorth ? const Color(0xFFFFD700) : Colors.white24,
+          color: badgeBorder,
           width: 0.8,
         ),
       ),
@@ -1013,18 +1055,18 @@ class _QiblaCompassSheetState extends State<QiblaCompassSheet> with SingleTicker
         label,
         style: isKu
             ? AppTheme.kurdishText(
-                color: isNorth ? Colors.black : AppColors.cream,
+                color: textColor,
                 fontSize: 10.5,
                 fontWeight: FontWeight.bold,
               )
             : (isAr
                 ? AppTheme.arabicText(
-                    color: isNorth ? Colors.black : AppColors.cream,
+                    color: textColor,
                     fontSize: 10.5,
                     fontWeight: FontWeight.bold,
                   )
                 : TextStyle(
-                    color: isNorth ? Colors.black : AppColors.cream,
+                    color: textColor,
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   )),

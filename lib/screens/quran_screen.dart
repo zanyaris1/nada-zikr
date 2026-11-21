@@ -2724,6 +2724,7 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
                 highlightedAyahNumber: _highlightedAyahNumber,
                 bookmarkedAyahs: _bookmarkedAyahs,
                 onAyahTap: (ayah) => _showAyahActionMenu(ayah),
+                onOpenJumpSheet: () => _openMushafJumpSheet(context, language, isRtl),
                 isRtl: isRtl,
                 language: language,
               );
@@ -2731,12 +2732,13 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
           ),
         ),
 
-        // Floating Bottom Navigation Bar for Mushaf Mode
+        // Slim, sleek Bottom Navigation Bar for Mushaf Mode
         MushafBottomNavigationBar(
           currentPage: _currentMushafPage,
           totalPages: 604,
           language: language,
           onPreviousPage: () {
+            AppHaptics.selectionClick();
             if (_currentMushafPage > 1 && _mushafPageController.hasClients) {
               _mushafPageController.previousPage(
                 duration: const Duration(milliseconds: 300),
@@ -2745,6 +2747,7 @@ class _SurahReadingScreenState extends State<SurahReadingScreen> {
             }
           },
           onNextPage: () {
+            AppHaptics.selectionClick();
             if (_currentMushafPage < 604 && _mushafPageController.hasClients) {
               _mushafPageController.nextPage(
                 duration: const Duration(milliseconds: 300),
