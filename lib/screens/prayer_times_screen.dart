@@ -325,9 +325,8 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              const Color(0xFF0D2419),
-              AppColors.darkBg,
               AppColors.darkBgAlt,
+              AppColors.darkBg,
             ],
           ),
         ),
@@ -406,12 +405,11 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
                             },
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 8),
+                                  horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
                                 color: AppColors.panelColor,
                                 border: Border.all(
-                                    color:
-                                        AppColors.gold.withValues(alpha: 0.35)),
+                                    color: AppColors.panelBorderColor),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Row(
@@ -464,11 +462,10 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
                                   icon: Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: AppColors.gold.withValues(alpha: 0.15),
+                                      color: AppColors.panelColor,
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                          color: AppColors.gold
-                                              .withValues(alpha: 0.4)),
+                                          color: AppColors.panelBorderColor),
                                     ),
                                     child: Icon(Icons.explore_rounded,
                                         color: AppColors.gold, size: 18),
@@ -592,20 +589,20 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen>
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 15),
+                                horizontal: 20, vertical: 18),
                             decoration: BoxDecoration(
-                              color: AppColors.panelColor,
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppColors.softSurface,
+                                  AppColors.panelColor,
+                                ],
+                              ),
                               borderRadius: BorderRadius.circular(24),
                               border: Border.all(
-                                  color: AppColors.gold.withValues(alpha: 0.4),
-                                  width: 1.5),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.gold.withValues(alpha: 0.12),
-                                  blurRadius: 20,
-                                  spreadRadius: 1,
-                                ),
-                              ],
+                                  color: AppColors.panelBorderColor,
+                                  width: 1),
                             ),
                             child: Column(
                               children: [

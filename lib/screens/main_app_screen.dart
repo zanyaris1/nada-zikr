@@ -197,7 +197,7 @@ class _NadaBottomNavBar extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.only(bottom: bottomPadding),
             child: SizedBox(
-              height: 60,
+              height: 56,
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 600),
@@ -261,24 +261,19 @@ class _NavBarTabButtonState extends State<_NavBarTabButton>
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 280),
+      duration: const Duration(milliseconds: 180),
     );
 
     _scaleAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 0.82)
+        tween: Tween<double>(begin: 1.0, end: 0.92)
             .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 35,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0.82, end: 1.18)
-            .chain(CurveTween(curve: Curves.easeOutBack)),
         weight: 45,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.18, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 20,
+        tween: Tween<double>(begin: 0.92, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 55,
       ),
     ]).animate(_animController);
   }

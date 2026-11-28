@@ -211,6 +211,14 @@ class NotificationService {
     final List<_PendingAlarm> pendingAlarms = [];
 
     final preAzanMinutes = StorageService.getPreAzanReminderMinutes();
+    // Fetch currently pending notification IDs once so we only cancel
+    // pre-reminders that are actually scheduled (avoids Android NotificationManager
+    // "Shedding cancel (dupe) ... rate limit exceeded" warnings).
+    Set<int> pendingIds = const {};
+    try {
+      final pending = await _plugin.pendingNotificationRequests();
+      pendingIds = pending.map((e) => e.id).toSet();
+    } catch (_) {}
     // iOS has a hard cap of 64 scheduled notifications.
     // If pre-azan reminders are enabled, each day generates 10 notifications (5 prayers + 5 reminders).
     // Scheduling 5 days yields 50 notifications (safely under 64).
@@ -287,8 +295,12 @@ class NotificationService {
               ));
             }
           } else {
-            // Explicitly cancel pre-reminder for silent prayers or when pre-reminder is disabled
-            await _plugin.cancel(id: _preReminderNotificationId(item));
+            // Explicitly cancel pre-reminder only if it is currently scheduled
+            final preId = _preReminderNotificationId(item);
+            if (pendingIds.contains(preId)) {
+              await _plugin.cancel(id: preId);
+              pendingIds.remove(preId);
+            }
           }
         }
       } catch (_) {

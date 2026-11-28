@@ -717,19 +717,22 @@ class _HadithScreenState extends State<HadithScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      hadith.getChapter(lang),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.mutedText,
-                        fontSize: 10.5,
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          hadith.getChapter(lang),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.mutedText,
+                            fontSize: 10.5,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
+                      const SizedBox(width: 6),
                     GestureDetector(
                       onTap: () {
                         AppHaptics.mediumImpact();
@@ -752,7 +755,8 @@ class _HadithScreenState extends State<HadithScreen> {
                             : AppColors.veryFaintText.withValues(alpha: 0.5),
                       ),
                     ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -812,29 +816,36 @@ class _HadithScreenState extends State<HadithScreen> {
                     ),
                   ),
                 ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      isKurmanji
-                          ? 'دەست لێبدە بۆ پتر'
-                          : (isKurdish
-                              ? 'دەست لێبدە بۆ زیاتر'
-                              : (isArabic ? 'اضغط للمزيد' : 'Tap for more')),
-                      style: TextStyle(
-                        color: AppColors.gold.withValues(alpha: 0.7),
-                        fontSize: 10,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          isKurmanji
+                              ? 'دەست لێبدە بۆ پتر'
+                              : (isKurdish
+                                  ? 'دەست لێبدە بۆ زیاتر'
+                                  : (isArabic ? 'اضغط للمزيد' : 'Tap for more')),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.gold.withValues(alpha: 0.7),
+                            fontSize: 10,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 3),
-                    Icon(
-                      (isKurmanji || isKurdish)
-                          ? Icons.chevron_left_rounded
-                          : Icons.chevron_right_rounded,
-                      size: 14,
-                      color: AppColors.gold.withValues(alpha: 0.7),
-                    ),
-                  ],
+                      const SizedBox(width: 3),
+                      Icon(
+                        (isKurmanji || isKurdish)
+                            ? Icons.chevron_left_rounded
+                            : Icons.chevron_right_rounded,
+                        size: 14,
+                        color: AppColors.gold.withValues(alpha: 0.7),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

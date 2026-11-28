@@ -78,7 +78,7 @@ class AppUpdateService {
           ? (data['android_url'] ??
               'https://play.google.com/store/apps/details?id=com.nada.zikrakanm')
           : (data['ios_url'] ??
-              'https://apps.apple.com/app/nada-zikr/id6738914800');
+              'https://apps.apple.com/app/nada-zikr/id6824707523');
 
       final String lang = AppLocalizations.languageCode;
       String releaseNotes = '';

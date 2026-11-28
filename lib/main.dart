@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'screens/prayer_times_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -238,6 +239,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     return MaterialApp(
         title: 'نەدا: قورئان و یادی خوا',
+        routes: {
+          '/prayer_times': (context) => const PrayerTimesScreen(),
+        },
         onGenerateTitle: (context) =>
             AppLocalizations.of(context)?.translate('appFullTitle') ??
             'نەدا: قورئان و یادی خوا',
