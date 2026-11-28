@@ -32,6 +32,7 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
   bool _isCustomTarget = false;
   String _activeDhikr = 'سُبْحَانَ اللهِ';
   bool _isCustom = false;
+  bool _isTapped = false;
   final Map<String, Map<String, int>> _savedProgress = {};
   int _selectionVersion = 0;
 
@@ -117,7 +118,13 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
   }
 
   void _handleTap() {
-    setState(() => _count++);
+    setState(() {
+      _count++;
+      _isTapped = true;
+    });
+    Future.delayed(const Duration(milliseconds: 90), () {
+      if (mounted) setState(() => _isTapped = false);
+    });
     _rememberCurrentProgress();
 
     final zikrKey = _currentZikrText;
@@ -499,68 +506,125 @@ class _TasbeehScreenState extends State<TasbeehScreen> {
                   ),
                   const SizedBox(height: 20),
                   Center(
-                    child: Container(
-                      width: 250,
-                      height: 250,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [AppColors.softSurface, AppColors.darkBg],
-                        ),
-                        border: Border.all(
-                            color: AppColors.gold.withValues(alpha: 0.25),
-                            width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.gold.withValues(alpha: 0.12),
-                            blurRadius: 70,
-                            spreadRadius: 8,
+                    child: SizedBox(
+                      width: 260,
+                      height: 260,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Background Ring
+                          SizedBox(
+                            width: 256,
+                            height: 256,
+                            child: CircularProgressIndicator(
+                              value: 1.0,
+                              strokeWidth: 4.5,
+                              valueColor: AlwaysStoppedAnimation(
+                                AppColors.panelBorderColor.withValues(alpha: 0.35),
+                              ),
+                            ),
                           ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20),
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  '$_count',
-                                  style: AppTheme.englishTitle(
-                                    color: AppColors.gold,
-                                    fontSize: 72,
-                                    fontWeight: FontWeight.w300,
+                          // Smooth Animated Progress Arc
+                          TweenAnimationBuilder<double>(
+                            tween: Tween<double>(
+                              begin: 0,
+                              end: _target > 0
+                                  ? (_inRound / _target).clamp(0.0, 1.0)
+                                  : 0,
+                            ),
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, val, child) {
+                              return SizedBox(
+                                width: 256,
+                                height: 256,
+                                child: CircularProgressIndicator(
+                                  value: val,
+                                  strokeWidth: 5.5,
+                                  strokeCap: StrokeCap.round,
+                                  valueColor:
+                                      AlwaysStoppedAnimation(AppColors.gold),
+                                ),
+                              );
+                            },
+                          ),
+                          // Interactive Bouncing Core
+                          AnimatedScale(
+                            scale: _isTapped ? 0.94 : 1.0,
+                            duration: const Duration(milliseconds: 90),
+                            curve: Curves.easeOut,
+                            child: Container(
+                              width: 236,
+                              height: 236,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: RadialGradient(
+                                  colors: [
+                                    AppColors.softSurface,
+                                    AppColors.darkBg,
+                                  ],
+                                ),
+                                border: Border.all(
+                                  color: AppColors.gold.withValues(alpha: 0.22),
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.gold.withValues(alpha: 0.14),
+                                    blurRadius: 40,
+                                    spreadRadius: 2,
                                   ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 20),
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          '$_count',
+                                          style: AppTheme.englishTitle(
+                                            color: AppColors.gold,
+                                            fontSize: 72,
+                                            fontWeight: FontWeight.w300,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      isKurmanji
+                                          ? 'هژمارتن'
+                                          : (isKurdish
+                                              ? 'ژماردن'
+                                              : (isArabic
+                                                  ? 'اضغط للتسبيح'
+                                                  : 'Tap to count')),
+                                      style: isKurdish
+                                          ? AppTheme.kurdishText(
+                                              color: AppColors.veryFaintText,
+                                              fontSize: 12,
+                                            )
+                                          : (isArabic
+                                              ? AppTheme.arabicText(
+                                                  color: AppColors.veryFaintText,
+                                                  fontSize: 12,
+                                                )
+                                              : AppTheme.englishText(
+                                                  color: AppColors.veryFaintText,
+                                                  fontSize: 12,
+                                                )),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              isKurmanji
-                                  ? 'هژمارتن'
-                                  : (isKurdish
-                                      ? 'ژماردن'
-                                      : (isArabic ? 'اضغط للتسبيح' : 'Tap to count')),
-                              style: isKurdish
-                                  ? AppTheme.kurdishText(
-                                      color: AppColors.veryFaintText,
-                                      fontSize: 12,
-                                    )
-                                  : (isArabic
-                                      ? AppTheme.arabicText(
-                                          color: AppColors.veryFaintText,
-                                          fontSize: 12,
-                                        )
-                                      : AppTheme.englishText(
-                                          color: AppColors.veryFaintText,
-                                          fontSize: 12,
-                                        )),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

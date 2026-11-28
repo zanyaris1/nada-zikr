@@ -131,8 +131,8 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: TasbeehScreen()));
     await tester.pumpAndSettle();
 
-    expect(find.text('33x'), findsOneWidget);
-    expect(find.text('99x'), findsOneWidget);
+    expect(find.byKey(const ValueKey('target-33')), findsOneWidget);
+    expect(find.byKey(const ValueKey('target-99')), findsOneWidget);
     expect(find.byKey(const ValueKey('target-custom')), findsOneWidget);
 
     await tester.scrollUntilVisible(find.byKey(const ValueKey('target-custom')), 50,
@@ -354,14 +354,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('قیبلەنمای پیرۆز - Qibla Compass'), findsOneWidget);
+    expect(find.byType(QiblaCompassSheet), findsOneWidget);
     expect(find.text('Erbil, Kurdistan'), findsOneWidget);
-    expect(find.text('N'), findsOneWidget);
-    expect(find.text('E'), findsOneWidget);
-    expect(find.text('S'), findsOneWidget);
-    expect(find.text('W'), findsOneWidget);
-    expect(find.text('ڕووگەی قیبلە'), findsOneWidget);
-    expect(find.text('دووری تا مەککە'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
   });

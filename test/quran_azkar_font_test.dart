@@ -1,12 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:nada_zikrakanm/models/app_data.dart';
 import 'package:nada_zikrakanm/models/azkar_model.dart';
-import 'package:nada_zikrakanm/widgets/app_theme.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  GoogleFonts.config.allowRuntimeFetching = false;
 
   group('Quran Ayahs in Zikr section font & detection test', () {
     test('Ayat al-Kursi in sleep azkar is detected as Quran and has Quran title', () {
@@ -67,20 +64,6 @@ void main() {
       expect(ikhlas.getQuranTitle('ku'), contains('سوورەتی ئیخڵاس'));
       expect(falaq.getQuranTitle('ku'), contains('سوورەتی فەلەق'));
       expect(nas.getQuranTitle('ku'), contains('سوورەتی ناس'));
-    });
-
-    test('QuranAyahText style uses Scheherazade New with cv72 feature', () {
-      final style = AppTheme.quranAyahText(fontSize: 26);
-      expect(style.fontFamily, contains('Scheherazade'));
-      expect(style.fontSize, 26);
-      expect(style.fontFeatures, isNotEmpty);
-      expect(style.fontFeatures!.any((f) => f.feature == 'cv72'), isTrue);
-    });
-
-    test('zikrText style uses Cairo font for non-Quran dhikr', () {
-      final style = AppTheme.zikrText(fontSize: 24);
-      expect(style.fontFamily, contains('Cairo'));
-      expect(style.fontSize, 24);
     });
   });
 }

@@ -33,6 +33,16 @@ class _HomeScreenState extends State<HomeScreen> {
   UserProfile? _profile;
   String? _selectedMood;
   Map<String, bool> _dailyPath = {};
+  Map<String, dynamic>? _todayPrayerSchedule;
+
+  Future<void> _loadTodayPrayerSchedule() async {
+    try {
+      final schedule = await PrayerRepository.getPrayerScheduleForDate(date: DateTime.now());
+      if (mounted) {
+        setState(() => _todayPrayerSchedule = schedule);
+      }
+    } catch (_) {}
+  }
 
   Future<void> _openQuranAyah(int surahNumber, int ayahNumber) async {
     final surahs = await QuranService.instance.loadSurahs();
@@ -58,6 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
     AppThemeController.instance.addListener(_onThemeChanged);
     StorageService.dailyPathChanges.addListener(_onDailyPathChanged);
     _loadProfile();
+    _loadTodayPrayerSchedule();
   }
 
   @override
@@ -247,6 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
     AppHaptics.selectionClick();
     await Future.wait([
       _loadProfile(),
+      _loadTodayPrayerSchedule(),
       Future.microtask(() => _loadDailyPath()),
     ]);
     if (mounted) setState(() {});
@@ -384,47 +396,31 @@ class _HomeScreenState extends State<HomeScreen> {
                                         loc?.translate('appTitle') ?? 'نەدا',
                                         style: isKurdish
                                             ? AppTheme.kurdishTitle(
-                                                fontSize: 16, color: AppColors.gold)
+                                                fontSize: 15, color: AppColors.gold)
                                             : AppTheme.englishTitle(
-                                                fontSize: 16,
+                                                fontSize: 15,
                                                 color: AppColors.gold),
                                       ),
                                       const SizedBox(width: 8),
                                       Flexible(
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.gold
-                                                .withValues(alpha: 0.12),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            border: Border.all(
-                                                color: AppColors.gold
-                                                    .withValues(alpha: 0.25)),
-                                          ),
-                                          child: Text(
-                                            loc?.translate('appTagline') ??
-                                                (isKurdish
-                                                    ? 'شەونمی ئارامی بۆ دڵەکان'
-                                                    : 'Dew of Spiritual Serenity'),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: isKurdish
-                                                ? AppTheme.kurdishText(
-                                                    fontSize: 10,
-                                                    color: AppColors.gold,
-                                                    fontWeight: FontWeight.bold)
-                                                : (isArabic
-                                                    ? AppTheme.arabicText(
-                                                        fontSize: 10,
-                                                        color: AppColors.gold)
-                                                    : AppTheme.englishText(
-                                                        fontSize: 10,
-                                                        color: AppColors.gold,
-                                                        fontWeight:
-                                                            FontWeight.bold)),
-                                          ),
+                                        child: Text(
+                                          loc?.translate('appTagline') ??
+                                              (isKurdish
+                                                  ? 'شەونمی ئارامی بۆ دڵەکان'
+                                                  : 'Dew of Spiritual Serenity'),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: isKurdish
+                                              ? AppTheme.kurdishText(
+                                                  fontSize: 11,
+                                                  color: AppColors.mutedText)
+                                              : (isArabic
+                                                  ? AppTheme.arabicText(
+                                                      fontSize: 11,
+                                                      color: AppColors.mutedText)
+                                                  : AppTheme.englishText(
+                                                      fontSize: 11,
+                                                      color: AppColors.mutedText)),
                                         ),
                                       ),
                                     ],
@@ -469,31 +465,33 @@ class _HomeScreenState extends State<HomeScreen> {
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 10),
+                                    horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: AppColors.gold.withValues(alpha: 0.12),
+                                  color: AppColors.panelColor,
                                   border: Border.all(
-                                      color: AppColors.gold
-                                          .withValues(alpha: 0.25)),
-                                  borderRadius: BorderRadius.circular(16),
+                                      color: AppColors.panelBorderColor),
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
-                                child: Column(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.local_fire_department_rounded, size: 20, color: AppColors.gold),
-                                    const SizedBox(height: 4),
+                                    Icon(Icons.local_fire_department_rounded,
+                                        size: 18, color: AppColors.gold),
+                                    const SizedBox(width: 6),
                                     Text(
                                       '${_profile!.currentStreak}',
                                       style: AppTheme.englishTitle(
-                                          fontSize: 18, color: AppColors.cream),
+                                          fontSize: 16, color: AppColors.cream),
                                     ),
+                                    const SizedBox(width: 4),
                                     Text(
                                       loc?.translate('streak') ?? 'ڕۆژ',
                                       style: isKurdish
                                           ? AppTheme.kurdishText(
-                                              fontSize: 10,
+                                              fontSize: 11,
                                               color: AppColors.faintText)
                                           : AppTheme.englishText(
-                                              fontSize: 10,
+                                              fontSize: 11,
                                               color: AppColors.faintText),
                                     ),
                                   ],
@@ -504,6 +502,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+
+                    // Hero Live Prayer Card
+                    _buildHeroPrayerCard(isKurdish, isKurmanji, lang),
 
                     // Mood selector
                     Padding(
@@ -539,12 +540,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 4),
+                                      horizontal: 10, vertical: 5),
                                   decoration: BoxDecoration(
-                                    color: AppColors.gold.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(12),
+                                    color: AppColors.panelColor,
+                                    borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
-                                      color: AppColors.gold.withValues(alpha: 0.3),
+                                      color: AppColors.panelBorderColor,
                                     ),
                                   ),
                                   child: Row(
@@ -733,13 +734,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
+                                    horizontal: 9, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: AppColors.gold.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color:
-                                          AppColors.gold.withValues(alpha: 0.3)),
+                                  color: AppColors.softSurface,
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
                                   '${['morning', 'tasbeeh', 'evening', 'sleep'].where((step) => _dailyPath[step] == true).length} / 4',
@@ -747,7 +745,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   style: TextStyle(
                                     color: AppColors.gold,
                                     fontSize: 12,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
@@ -1192,6 +1190,276 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildHeroPrayerCard(bool isKurdish, bool isKurmanji, String lang) {
+    if (_todayPrayerSchedule == null) return const SizedBox.shrink();
+
+    final data = _todayPrayerSchedule!;
+    final List<PrayerTimeItem> items =
+        (data['items'] as List?)?.whereType<PrayerTimeItem>().toList() ?? const [];
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    final String nextId = data['nextId'] ?? '';
+    final DateTime? nextTime = data['nextTime'];
+    final WorldCity? currentCity = data['city'];
+    final String locationName = isKurdish
+        ? (data['locationNameKu'] ?? currentCity?.nameKu ?? data['locationName'] ?? 'کوردستان')
+        : (lang == 'ar'
+            ? (data['locationNameAr'] ?? currentCity?.nameAr ?? data['locationName'] ?? 'كردستان')
+            : (data['locationNameEn'] ?? currentCity?.nameEn ?? data['locationName'] ?? 'Kurdistan'));
+
+    String countdownStr = '';
+    if (nextTime != null) {
+      final targetUtcOffset = (data['targetUtcOffset'] as num?)?.toDouble() ?? 3.0;
+      final targetCityUtc = DateTime.now().toUtc().add(Duration(minutes: (targetUtcOffset * 60).round()));
+      final targetCityNow = DateTime(
+        targetCityUtc.year,
+        targetCityUtc.month,
+        targetCityUtc.day,
+        targetCityUtc.hour,
+        targetCityUtc.minute,
+        targetCityUtc.second,
+      );
+      final diff = nextTime.difference(targetCityNow);
+      if (!diff.isNegative) {
+        final h = diff.inHours;
+        final m = diff.inMinutes % 60;
+        if (h > 0) {
+          countdownStr = isKurmanji
+              ? 'پشتی $h دەمژمێر و $m خولەک'
+              : (isKurdish
+                  ? 'دوای $h کاتژمێر و $m خولەک'
+                  : (lang == 'ar' ? 'بعد $h س و $m د' : 'in ${h}h ${m}m'));
+        } else {
+          countdownStr = isKurmanji
+              ? 'پشتی $m خولەک'
+              : (isKurdish
+                  ? 'دوای $m خولەک'
+                  : (lang == 'ar' ? 'بعد $m دقيقة' : 'in ${m}m'));
+        }
+      }
+    }
+
+    final nextItem = items.firstWhere(
+      (it) => it.id == nextId,
+      orElse: () => items.first,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: GestureDetector(
+        onTap: () {
+          if (widget.onSelectTab != null) {
+            widget.onSelectTab!(1);
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.softSurface,
+                AppColors.panelColor,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: AppColors.panelBorderColor,
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.location_on_rounded, color: AppColors.gold, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        locationName,
+                        style: isKurdish
+                            ? AppTheme.kurdishText(
+                                fontSize: 12,
+                                color: AppColors.gold,
+                                fontWeight: FontWeight.bold)
+                            : AppTheme.englishText(
+                                fontSize: 12,
+                                color: AppColors.gold,
+                                fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        isKurmanji
+                            ? 'دەستکاریکرن'
+                            : (isKurdish
+                                ? 'کاتەکانی بانگ'
+                                : (lang == 'ar' ? 'المواقيت' : 'Prayers')),
+                        style: isKurdish
+                            ? AppTheme.kurdishText(
+                                fontSize: 12,
+                                color: AppColors.gold,
+                                fontWeight: FontWeight.w600)
+                            : AppTheme.englishText(
+                                fontSize: 12,
+                                color: AppColors.gold,
+                                fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(
+                        (isKurdish || lang == 'ar')
+                            ? Icons.chevron_left_rounded
+                            : Icons.chevron_right_rounded,
+                        size: 16,
+                        color: AppColors.gold,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isKurmanji
+                            ? 'بانگێ بهێت'
+                            : (isKurdish
+                                ? 'بانگی داهاتوو'
+                                : (lang == 'ar'
+                                    ? 'الصلاة القادمة'
+                                    : 'Next Prayer')),
+                        style: isKurdish
+                            ? AppTheme.kurdishText(
+                                fontSize: 12, color: AppColors.faintText)
+                            : AppTheme.englishText(
+                                fontSize: 12, color: AppColors.faintText),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        nextItem.localizedName(lang),
+                        style: isKurdish
+                            ? AppTheme.kurdishTitle(
+                                fontSize: 26, color: AppColors.gold)
+                            : AppTheme.englishTitle(
+                                fontSize: 26, color: AppColors.gold),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        nextItem.formattedTime(),
+                        style: AppTheme.englishTitle(
+                          fontSize: 22,
+                          color: AppColors.cream,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (countdownStr.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          countdownStr,
+                          style: isKurdish
+                              ? AppTheme.kurdishText(
+                                  fontSize: 11, color: AppColors.gold)
+                              : AppTheme.englishText(
+                                  fontSize: 11, color: AppColors.gold),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: items.map<Widget>((item) {
+                  final isNext = item.id == nextId;
+                  return Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isNext
+                            ? AppColors.gold.withValues(alpha: 0.18)
+                            : AppColors.darkBg.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(10),
+                        border: isNext
+                            ? Border.all(
+                                color: AppColors.gold.withValues(alpha: 0.5),
+                                width: 1)
+                            : Border.all(
+                                color: AppColors.panelBorderColor
+                                    .withValues(alpha: 0.2),
+                                width: 0.5),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            item.localizedName(lang),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: isKurdish
+                                ? AppTheme.kurdishText(
+                                    fontSize: 10,
+                                    color: isNext
+                                        ? AppColors.gold
+                                        : AppColors.faintText,
+                                    fontWeight: isNext
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  )
+                                : AppTheme.englishText(
+                                    fontSize: 9,
+                                    color: isNext
+                                        ? AppColors.gold
+                                        : AppColors.faintText,
+                                    fontWeight: isNext
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item.formattedTime(),
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: isNext
+                                  ? AppColors.cream
+                                  : AppColors.veryFaintText,
+                              fontWeight: isNext
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
